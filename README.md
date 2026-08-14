@@ -1,4 +1,4 @@
-# COURS M2 TNAH: Développement applicatif
+# COURS M2 TNAH: développement applicatif
 
 On va développer graveeeeeeee ça va être superrrrrr
 
