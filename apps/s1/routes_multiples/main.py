@@ -6,11 +6,11 @@ app = Flask("routes multiples")
 def index():
     return "Hello world !"
 
-@app.route("/page1")
+@app.route("/page/1")
 def page1():
     return "Vous êtes sur la page 1"
 
-@app.route("/page2")
+@app.route("/page/2")
 def page2():
     return "Vous êtes sur la page 2"
 
