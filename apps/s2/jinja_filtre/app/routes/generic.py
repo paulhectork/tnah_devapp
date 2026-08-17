@@ -2,17 +2,40 @@ from flask import render_template
 
 from app.app import app
 
-app_name = "Catalogue Richelieu"
-
-# nos ressources iconographiques
 icono = [
-    "Palais Royal (1909-1927)",
-    "Palais Royal (1857-1870)",
-    "Hôtel de la Chancellerie d'Orléans : 19 rue des Bons Enfants",
-    "Omnibus tiré par des chevaux, près du 9 rue de Valois, lieu de travail du photographe Zulimo Chiesi",
-    "Groupe des délégués internationaux au 35e congrès de l'Union des sociétés de gymnastique de France",
+    {
+        "auteurice": "Eugène Atget",
+        "titre": "Palais Royal",
+        "date": "1909-1927",
+        "url": "https://quartier-richelieu.inha.fr/iconographie/qr12ad70f104f8245b69df7d1b35ac70b9f",
+    },
+    {
+        "auteurice": "Jules Arnoult",
+        "titre": "Palais Royal",
+        "date": "1857-1870",
+        "url": "https://quartier-richelieu.inha.fr/iconographie/qr12e06bf9e7d31433f9c3f266e8970404d",
+    },
+    {
+        "auteurice": "Eugène Atget",
+        "titre": "Hôtel de la Chancellerie d'Orléans : 19 rue des Bons Enfants",
+        "date": "1905-1927",
+        "url": "https://quartier-richelieu.inha.fr/iconographie/qr16ff0b86851cb4a36a340584318cb0f71",
+    },
+    {
+        "auteurice": "Chiesi Zulimo pour Agence Rol",
+        "titre": "Omnibus tiré par des chevaux, près du 9 rue de Valois, lieu de travail du photographe Zulimo Chiesi",
+        "date": "1893-1900",
+        "url": "https://quartier-richelieu.inha.fr/iconographie/qr1d4335d4decc24cdb971ba08874ab6126",
+    },
+    {
+        "auteurice": "Agence Rol",
+        "titre": "Groupe des délégués internationaux au 35e congrès de l'Union des sociétés de gymnastique de France",
+        "date": "1908",
+        "url": "https://quartier-richelieu.inha.fr/iconographie/qr10765fe0799654a79b8c2e3abb5107179",
+    },
 ]
 
 @app.route("/")
 def index():
+    app_name = "Catalogue Richelieu"
     return render_template("homepage.html", app_name=app_name, icono=icono)

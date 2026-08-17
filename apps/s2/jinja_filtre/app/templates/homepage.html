@@ -8,7 +8,17 @@
         <p>Il y a <b>{{icono|length}} ressources iconographiques</b> 
             sur ce site.</p>
 
-        <p>Les titres des ressources sont: 
-            {{icono|join(", ")}}.</p>
+        <p>Voici la fiche de la première ressource iconographique:</p>
+        <ul>
+            <li>Auteur.ice: {{icono[0]["auteurice"]}}</li>
+            <li>Titre: {{icono[0]["titre"]}}</li>
+            {# ici, on utilise `dict.cle` et non `dict["cle"]` #}
+            <li>Date: {{icono[0].date}}</li>
+            <li>URL source: 
+                <a href="{{icono[0].url}}">
+                    {{icono[0].url}}
+                </a>
+            </li>
+        </ul>
     </body>
 </html>
