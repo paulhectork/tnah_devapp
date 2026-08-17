@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <title>{{ app_name }}</title>
+    </head>
+    <body>
+        <h1>Bienvenue sur le {{ app_name }} !</h1>
+
+        <p>Il y a <b>{{ icono|length }} ressources iconographiques</b> 
+            sur ce site.</p>
+
+        <ul>
+            {% for item in icono %}
+                <li>
+                    Item {{ item.id }}: 
+                    <a href="{{ url_for('icono_main', id_icono=item.id) }}">{{ item.titre }}</a>
+                </li>
+            {% endfor %}        
+        </ul>
+    </body>
+</html>

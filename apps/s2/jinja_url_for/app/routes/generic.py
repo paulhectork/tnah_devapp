@@ -44,3 +44,10 @@ icono = [
 def index():
     app_name = "Catalogue Richelieu"
     return render_template("homepage.html", app_name=app_name, icono=icono)
+
+@app.route("/iconographie/<int:id_icono>")
+def icono_main(id_icono: int):
+    for item in icono:
+        if item["id"] == id_icono:
+            item_icono = item
+    return render_template("icono_main.html", item_icono=item_icono)

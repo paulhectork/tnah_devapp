@@ -1,24 +1,29 @@
 <html>
     <head>
-        <title>{{app_name}}</title>
+        <title>{{ app_name }}</title>
     </head>
     <body>
-        <h1>Bienvenue sur le {{app_name}} !</h1>
+        <h1>Bienvenue sur le {{ app_name }} !</h1>
 
         <p>Il y a <b>{{icono|length}} ressources iconographiques</b> 
             sur ce site.</p>
 
-        <p>Voici la fiche de la première ressource iconographique:</p>
         <ul>
-            <li>Auteur.ice: {{icono[0]["auteurice"]}}</li>
-            <li>Titre: {{icono[0]["titre"]}}</li>
-            {# ici, on utilise `dict.cle` et non `dict["cle"]` #}
-            <li>Date: {{icono[0].date}}</li>
-            <li>URL source: 
-                <a href="{{icono[0].url}}">
-                    {{icono[0].url}}
-                </a>
-            </li>
+            {% for icono_item in icono %}
+                <li>Item {{ icono_item.id }}:
+                    <ul>
+                        <li>Auteur.ice: {{ icono_item.auteurice }}</li>
+                        <li>Titre: {{ icono_item.titre }}</li>
+                        {# ici, on utilise `dict.cle` et non `dict["cle"]` #}
+                        <li>Date: {{ icono_item.date }}</li>
+                        <li>URL source: 
+                            <a href="{{ icono_item.url }}">
+                                {{ icono_item.url }}
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            {% endfor %}
         </ul>
     </body>
 </html>
