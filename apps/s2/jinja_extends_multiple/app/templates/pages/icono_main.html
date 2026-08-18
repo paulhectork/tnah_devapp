@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% block title_extra %}
+    {% if item_icono %}| {{ item_icono.titre }}{% endif %}
+{% endblock %}
+
 {% block main_content %}
     <h1>Ressource iconographique: 
         <i>{{ item_icono.titre }}</i>
@@ -18,5 +22,4 @@
     </ul>
 
     <a href="{{ url_for('index') }}">Retour à l'accueil</a>
-
 {% endblock %}

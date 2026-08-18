@@ -1,6 +1,9 @@
 <html>
     <head>
-        <title>{{ app_name }}</title>
+        <title>
+            {{ app_name }}
+            {% block title_extra %}{% endblock %}
+        </title>
     </head>
     <body style="background-color: #a4f4f9">
         <nav>Catalogue Richelieu</nav>
