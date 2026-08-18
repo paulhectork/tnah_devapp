@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+            {{ app_name }}
+            {% block title_extra %}{% endblock %}
+        </title>
+        {% include "includes/metadata.html" %}
+    </head>
+    <body style="background-color: #a4f4f9">
+        {% include "includes/header.html" %}
+        <main style="background-color: #ff69b4">
+            {% block main_content %}{% endblock %}
+        </main>
+        {% include "includes/footer.html" %}
+    </body>
+</html>

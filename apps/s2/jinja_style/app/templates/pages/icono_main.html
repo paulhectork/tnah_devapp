@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title_extra %}
+    {% if item_icono %}| {{ item_icono.titre }}{% endif %}
+{% endblock %}
+
+{% block main_content %}
+    <h1>Ressource iconographique: 
+        <i>{{ item_icono.titre }}</i>
+    </h1>
+
+    <ul>
+        <li>Auteur.ice: {{ item_icono.auteurice }}</li>
+        <li>Titre: {{ item_icono.titre }}</li>
+        {# ici, on utilise `dict.cle` et non `dict["cle"]` #}
+        <li>Date: {{ item_icono.date }}</li>
+        <li>URL source: 
+            <a href="{{ item_icono.url }}">
+                {{ item_icono.url }}
+            </a>
+        </li>
+    </ul>
+
+    <a href="{{ url_for('index') }}">Retour à l'accueil</a>
+{% endblock %}
