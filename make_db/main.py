@@ -89,7 +89,7 @@ class MigrationPipeline:
 
         # async stuff
         # _session is defined in `__aenter__` / closed in `__aexit__`
-        self.max_connections = 5
+        self.max_connections = 1 # NIK GALLICA et ses blocages expresssssssss
         self._session: aiohttp.ClientSession | None = None
         self.semaphore = asyncio.Semaphore(self.max_connections)
         return
@@ -101,6 +101,11 @@ class MigrationPipeline:
             # so that the aiohttp.Session queue is always empty
             # (otherwise, risk of timeouts, stale connections etc.)
             connector=aiohttp.TCPConnector(limit=self.max_connections+5),
+            # NOTE: useful to avoid getting blocked by the server
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+
+            },
             timeout=aiohttp.ClientTimeout(
                 total=None,        # no hard cap on the full lifecycle
                 connect=None,      # no cap on pool wait + sock_connect combined
@@ -136,6 +141,32 @@ class MigrationPipeline:
                 r_text = await response.text()
         return json.loads(r_text)
     
+    async def _get_iiif_images(self):
+        errors = []
+    
+        async def inner(iiif_url: str) -> str:
+            try:
+                manifest = await self._fetch_to_json(url=iiif_url)
+                id_img = manifest["sequences"][0]["canvases"][0]["images"][0]["resource"]["@id"]
+                id_img.replace("/full/full/", "/full/1000/")  # clip size to 1000px
+                return id_img
+            except Exception as e:
+                errors.append(iiif_url)
+                print(f"failed to fetch {iiif_url}: {e!r}")
+                return None
+            
+        df = self.df_iconography[["id", "iiif_url"]].loc[~self.df_iconography.iiif_url.isna()].copy()
+        iiif_url_list = df["iiif_url"].unique()
+
+        df["iiif_image_url"] = await tqdm_asyncio.gather(
+            *[ inner(iiif_url) for iiif_url in iiif_url_list ],
+            desc="fetching IIIF image URLs"
+        )
+        if len(errors):
+            print(f"{len(errors)} errors exporting data: {errors}")
+
+        return self
+
     # return a generator of (df_name, df) for each dataframe defined in `self` 
     def _get_dfs(self):
         # df_name -> df
@@ -311,30 +342,6 @@ class MigrationPipeline:
         del self.df_r_address_place
         del self.df_r_iconography_actor
         del self.df_actor
-
-        return self
-
-    async def _get_iiif_images(self):
-        errors = []
-    
-        async def inner(iiif_url: str) -> str:
-            try:
-                manifest = await self._fetch_to_json(url=iiif_url)
-                print(manifest)
-            except Exception as e:
-                errors.append(iiif_url)
-                print(f"failed to fetch {iiif_url}: {e!r}")
-                return None
-            
-        df = self.df_iconography[["id", "iiif_url"]].loc[~self.df_iconography.iiif_url.isna()].copy()
-        iiif_url_list = df["iiif_url"].unique()
-
-        df["iiif_image_url"] = await tqdm_asyncio.gather(
-            *[ inner(iiif_url) for iiif_url in iiif_url_list ],
-            desc="fetching IIIF image URLs"
-        )
-        if len(errors):
-            print(f"{len(errors)} errors exporting data: {errors}")
 
         return self
 
