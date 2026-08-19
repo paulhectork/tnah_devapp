@@ -1,11 +1,16 @@
 import os
 import re
+import json
+import asyncio
 from pathlib import Path
 from typing import Any, Literal
 
+import tenacity
+import aiohttp
+import dotenv
 import pandas as pd
 import numpy as np
-import dotenv
+from tqdm.asyncio import tqdm_asyncio
 from sqlalchemy import create_engine, URL
 from sqlalchemy.engine import Engine
 from sqlalchemy import types as sa_types
@@ -77,21 +82,70 @@ class MigrationPipeline:
         for r in required:
             if not kwargs.get(r): 
                 raise AttributeError(f"{r} is expected but missing !")
+
+        # create database
         self.pg_engine = kwargs.get("pg_engine")
         self.sqlite_engine = kwargs.get("sqlite_engine")
-        self._populate()
-    
-    # read tables from a live pg instance to dataframes
-    def _populate(self):
-        for tablename, cols in KEEP_INPUT.items():
-            # read table into df and only keep relevant columns
-            df = (
-                pd.read_sql(f"SELECT * FROM {tablename}", con=self.pg_engine, index_col=None)
-                [cols]
+
+        # async stuff
+        # _session is defined in `__aenter__` / closed in `__aexit__`
+        self.max_connections = 5
+        self._session: aiohttp.ClientSession | None = None
+        self.semaphore = asyncio.Semaphore(self.max_connections)
+        return
+
+    # NOTE: defining __aenter__ / __aexit__ turns this clas into an async content manager
+    async def __aenter__(self) -> "SasExporterBase":
+        self._session = aiohttp.ClientSession(
+            # NOTE TCPConnector limit must be higher than Semaphore limit
+            # so that the aiohttp.Session queue is always empty
+            # (otherwise, risk of timeouts, stale connections etc.)
+            connector=aiohttp.TCPConnector(limit=self.max_connections+5),
+            timeout=aiohttp.ClientTimeout(
+                total=None,        # no hard cap on the full lifecycle
+                connect=None,      # no cap on pool wait + sock_connect combined
+                sock_connect=10,   # timeout for TCP handshake/DNS only, excludes pool wait
+                sock_read=30       # timeout waiting for server response after request is sent
             )
-            # add each table to `self` so it can be accessed with self.df_{tablename}  
-            setattr(self, f"df_{tablename}", df)
-        return 
+        )
+        return self
+
+    async def __aexit__(self, *args) -> None:
+        if self._session:
+            await self._session.close()
+            self._session = None
+
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        if self._session is None:
+            raise RuntimeError(f"{self.__class__} must be used as an async context manager")
+        return self._session
+    
+    # asynchronous fetch
+    # retry 5 times, waiting 1-5 seconds between each
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(aiohttp.ClientResponseError),
+        stop=tenacity.stop_after_attempt(5),
+        wait=tenacity.wait_exponential(multiplier=1, min=1, max=5),
+        reraise=True  # if it still fails, raise the original error instead of tenacity.RetryError.
+    )
+    async def _fetch_to_json(self, url: str) -> dict:
+        async with self.semaphore:
+            async with self.session.get(url) as response:
+                response.raise_for_status()
+                r_text = await response.text()
+        return json.loads(r_text)
+    
+    # return a generator of (df_name, df) for each dataframe defined in `self` 
+    def _get_dfs(self):
+        # df_name -> df
+        df_dict = { 
+            k: v 
+            for k, v in self.__dict__.items()
+            if isinstance(v, pd.DataFrame)
+        }
+        for df_name, df in df_dict.items():
+            yield (df_name, df)
 
     def _assert_join_ok(self, df_left, df_right, left_col, right_col, value_cols=None):
         """
@@ -138,18 +192,17 @@ class MigrationPipeline:
                     f"{df_left.index[mismatch].tolist()[:5]}"
                 )
 
-    def _get_dfs(self):
-        """
-        return a generator of (df_name, df) for each dataframe defined in `self` 
-        """
-        # df_name -> df
-        df_dict = { 
-            k: v 
-            for k, v in self.__dict__.items()
-            if isinstance(v, pd.DataFrame)
-        }
-        for df_name, df in df_dict.items():
-            yield (df_name, df)
+    # read tables from a live pg instance to dataframes
+    def _populate(self):
+        for tablename, cols in KEEP_INPUT.items():
+            # read table into df and only keep relevant columns
+            df = (
+                pd.read_sql(f"SELECT * FROM {tablename}", con=self.pg_engine, index_col=None)
+                [cols]
+            )
+            # add each table to `self` so it can be accessed with self.df_{tablename}  
+            setattr(self, f"df_{tablename}", df)
+        return self
 
     def _joins(self):
         """
@@ -258,6 +311,30 @@ class MigrationPipeline:
         del self.df_r_address_place
         del self.df_r_iconography_actor
         del self.df_actor
+
+        return self
+
+    async def _get_iiif_images(self):
+        errors = []
+    
+        async def inner(iiif_url: str) -> str:
+            try:
+                manifest = await self._fetch_to_json(url=iiif_url)
+                print(manifest)
+            except Exception as e:
+                errors.append(iiif_url)
+                print(f"failed to fetch {iiif_url}: {e!r}")
+                return None
+            
+        df = self.df_iconography[["id", "iiif_url"]].loc[~self.df_iconography.iiif_url.isna()].copy()
+        iiif_url_list = df["iiif_url"].unique()
+
+        df["iiif_image_url"] = await tqdm_asyncio.gather(
+            *[ inner(iiif_url) for iiif_url in iiif_url_list ],
+            desc="fetching IIIF image URLs"
+        )
+        if len(errors):
+            print(f"{len(errors)} errors exporting data: {errors}")
 
         return self
 
@@ -375,16 +452,25 @@ class MigrationPipeline:
         return
 
 
-    def pipeline(self):
-        (
-            self
-            ._joins()
-            ._add_urls()
-            ._drop_fields()
-            ._cast_types()
-            ._to_sql()
-        )
+    async def pipeline_async(self):
+        async with self:        
+            (
+                self
+                ._populate()
+                ._joins()
+            )
+            await self._get_iiif_images()
+            (
+                self
+                ._add_urls()
+                ._drop_fields()
+                ._cast_types()
+                ._to_sql()
+            )
         return
+
+    def pipeline(self):
+        asyncio.run(self.pipeline_async())
 
 
 if __name__ == "__main__":
@@ -404,3 +490,4 @@ if __name__ == "__main__":
 
     # make migration and create new db
     MigrationPipeline(pg_engine=pg_engine, sqlite_engine=sqlite_engine).pipeline()
+
