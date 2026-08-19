@@ -1,11 +1,13 @@
 from pathlib import Path
 import os
+from typing import Any
 
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine, URL
 from sqlalchemy.engine import Engine
 import dotenv
+from psycopg2._range import NumericRange
 
 PATH_DIR = Path(__file__).parent.resolve()
 PATH_ENV = PATH_DIR / ".env"
@@ -75,7 +77,7 @@ def make_pg_engine():
 
     return create_engine(url, echo=False)
 
-class Database:
+class MigrationPipeline:
     """pandas dataframe representation of our postgres database"""
     def __init__(self, **kwargs):
         required = ["pg_engine"]
@@ -142,6 +144,18 @@ class Database:
                     f"{df_left.index[mismatch].tolist()[:5]}"
                 )
 
+    def _get_dfs(self):
+        """
+        return a generator of (df_name, df) for each dataframe defined in `self` 
+        """
+        # df_name -> df
+        df_dict = { 
+            k: v 
+            for k, v in self.__dict__.items()
+            if isinstance(v, pd.DataFrame)
+        }
+        for df_name, df in df_dict.items():
+            yield (df_name, df)
 
     def _joins(self):
         """
@@ -258,16 +272,80 @@ class Database:
         for each ressource where it's possible, add an URL to the Quartier Richelieu website page. 
         """
         mapper = {
-            "theme": lambda x: f"https://quartier-richelieu.inha.fr/theme/{x}",
-            "iconography": lambda x: f"https://quartier-richelieu.inha.fr/iconographie/{x}",
-            "place": lambda x: f"https://quartier-richelieu.inha.fr/lieu/{x}",
+            "df_theme": lambda x: f"https://quartier-richelieu.inha.fr/theme/{x}",
+            "df_iconography": lambda x: f"https://quartier-richelieu.inha.fr/iconographie/{x}",
+            "df_place": lambda x: f"https://quartier-richelieu.inha.fr/lieu/{x}",
         }
-        for t, f in mapper.items():
-            df_name = f"df_{t}"
+        for df_name, f in mapper.items():
             df = getattr(self, df_name)
-            df["url_richelieu"] = df["id_uuid"].apply(f)
+            df["richelieu_url"] = df["id_uuid"].apply(f)
             setattr(self, df_name, df)
         return self
+
+    def _drop_fields(self):
+        """
+        drop useless fields from each table + rename fields
+        """
+        for df_name, df in self._get_dfs():
+            # drop id_uuid fields
+            df = df[[ c for c in df.columns if c != "id_uuid" ]]
+            setattr(self, df_name, df)
+
+        # tablename -> [ [fields to keep], {fields to rename} ]
+        mapper = {
+            "df_iconography": [
+                ['id', 'title', 'date', 'technique', 'iiif_url', 'source_url', 'richelieu_url', 'id_author'],
+                {}
+            ],
+            "df_author": [
+                ['id', 'entry_name'],
+                { "entry_name": "name" }
+            ],
+            "df_place": [
+                ['id', 'address', 'date', 'richelieu_url', 'centroid', 'vector'],
+                { "centroid": "loc" }
+            ],
+            "df_theme": [
+                ['id', 'entry_name', 'richelieu_url'],
+                { "entry_name": "name" }
+            ],
+        }
+        for df_name, [cols, rename_mapper] in mapper.items():
+            df = getattr(self, df_name)
+            print("* ", df_name, df.columns)
+            df = df[cols]
+            df = df.rename(columns=rename_mapper)
+            setattr(self, df_name, df)
+        return self
+
+    def _cast_types(self):
+        """
+        cast to specific types
+        """
+        def numericrange_to_inttuple(x: NumericRange|Any) -> tuple[int|float]:
+            return (x.lower, x.upper) if isinstance(x, NumericRange) else (np.nan, np.nan)
+
+        # transform `date` in `date_lower` and `date_upper` columns
+        for df_name, df in self._get_dfs():
+            if "date" in df.columns:
+                df["date"] = df["date"].apply(numericrange_to_inttuple)
+                df["date_lower"] = df["date"].apply(lambda x: x[0])
+                df["date_upper"] = df["date"].apply(lambda x: x[1])
+                df = df.drop(columns="date")
+            setattr(self, df_name, df)
+
+        # nullable FKs should contain mixed types: int+None. in Pandas, that's impossible 
+        # and ints are converted to float, none to np.nan. 
+        # => cast to pd.Int64Dtype, which allows both int and nan values
+        for df_name, df in self._get_dfs():
+            cols = [c for c in df.columns if c.startswith("id")]
+            df[cols] = df[cols].astype(pd.Int64Dtype())
+            print(df[cols])
+            setattr(self, df_name, df)
+        return self
+
+    def _to_sql(self):
+        # TODO
 
     def pipeline(self):
         (
@@ -275,9 +353,12 @@ class Database:
             ._joins()
             ._add_urls()
             ._drop_fields()
+            ._cast_types()
+            ._to_sql()
         )
         print(self.df_iconography.columns)
+        print(self.df_place.columns)
 
 if __name__ == "__main__":
     engine = make_pg_engine()
-    Database(pg_engine=engine).pipeline()
+    MigrationPipeline(pg_engine=engine).pipeline()
