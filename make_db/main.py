@@ -1,22 +1,20 @@
-from pathlib import Path
 import os
-from typing import Any
+import re
+from pathlib import Path
+from typing import Any, Literal
 
 import pandas as pd
 import numpy as np
+import dotenv
 from sqlalchemy import create_engine, URL
 from sqlalchemy.engine import Engine
-import dotenv
+from sqlalchemy import types as sa_types
 from psycopg2._range import NumericRange
 
 PATH_DIR = Path(__file__).parent.resolve()
 PATH_ENV = PATH_DIR / ".env"
-
-if not PATH_ENV.exists():
-    print(f".env file not found (looked at {PATH_ENV}). exiting...")
-    exit(1)
-
-dotenv.load_dotenv(PATH_ENV)
+PATH_OUT = PATH_DIR / "out"
+PATH_DB = PATH_OUT / "richelieu.db"
 
 # registry of { TABLENAME: COLUMNS_TO_KEEP } to read from the input postgres db
 KEEP_INPUT = {
@@ -48,46 +46,42 @@ KEEP_INPUT = {
     "r_cartography_place": [ "id", "id_cartography", "id_place" ],
 }
 
-def db_uri(params:dict) -> str:
-    """
-    create an URI to connect to the database based on the dict `params`
-    """
-    return sq.URL.create(
-        "postgresql", 
-        username=params['username'], 
-        password=params["password"], 
-        host=params["uri"],
-        database=params["db"] 
-    )
 
-def make_pg_engine():
+def make_engine(flavor: Literal["sqlite", "postgresql"]) -> Engine:
     env_vars = ["DB_NAME", "PG_HOST", "PG_PORT", "PG_USER", "PG_PASSWORD"]
-    expected = [ k for k in env_vars if k != "PG_PASSWORD" ]  # PG_PASSWORD depends on how your pg_hba conf is set.
+    if flavor == "postgresql":
+        expected = [ k for k in env_vars if k != "PG_PASSWORD" ]  # PG_PASSWORD depends on how your pg_hba conf is set.
+    else:
+        expected = [ "DB_NAME" ]
     credentials = { k: os.environ.get(k) for k in env_vars }
     assert all( credentials[k] for k in expected ), f"some .env variables are undefined. can't connect to postgres (env: {credentials})"
 
-    url = URL.create(
-        "postgresql", 
-        username=credentials["PG_USER"], 
-        password=credentials['PG_PASSWORD'], 
-        host=credentials['PG_HOST'], 
-        port=credentials['PG_PORT'],
-        database=credentials["DB_NAME"]
-    )
-
+    if flavor == "postgresql": 
+        url = URL.create(
+            "postgresql", 
+            username=credentials["PG_USER"], 
+            password=credentials['PG_PASSWORD'], 
+            host=credentials['PG_HOST'], 
+            port=credentials['PG_PORT'],
+            database=credentials["DB_NAME"]
+        )
+    else:
+        url = f"sqlite:///{PATH_DB}"
     return create_engine(url, echo=False)
 
+
 class MigrationPipeline:
-    """pandas dataframe representation of our postgres database"""
+    """migration pipeline: from the full Richelieu postgres database to a smaller sqlalchemy database"""
     def __init__(self, **kwargs):
-        required = ["pg_engine"]
+        required = ["pg_engine", "sqlite_engine"]
         for r in required:
             if not kwargs.get(r): 
                 raise AttributeError(f"{r} is expected but missing !")
         self.pg_engine = kwargs.get("pg_engine")
+        self.sqlite_engine = kwargs.get("sqlite_engine")
         self._populate()
     
-    # populate from a live postgres instance
+    # read tables from a live pg instance to dataframes
     def _populate(self):
         for tablename, cols in KEEP_INPUT.items():
             # read table into df and only keep relevant columns
@@ -294,7 +288,7 @@ class MigrationPipeline:
         # tablename -> [ [fields to keep], {fields to rename} ]
         mapper = {
             "df_iconography": [
-                ['id', 'title', 'date', 'technique', 'iiif_url', 'source_url', 'richelieu_url', 'id_author'],
+                ['id', 'title', 'date', 'iiif_url', 'source_url', 'richelieu_url', 'id_author'],
                 {}
             ],
             "df_author": [
@@ -312,7 +306,6 @@ class MigrationPipeline:
         }
         for df_name, [cols, rename_mapper] in mapper.items():
             df = getattr(self, df_name)
-            print("* ", df_name, df.columns)
             df = df[cols]
             df = df.rename(columns=rename_mapper)
             setattr(self, df_name, df)
@@ -340,12 +333,47 @@ class MigrationPipeline:
         for df_name, df in self._get_dfs():
             cols = [c for c in df.columns if c.startswith("id")]
             df[cols] = df[cols].astype(pd.Int64Dtype())
-            print(df[cols])
             setattr(self, df_name, df)
         return self
 
     def _to_sql(self):
-        # TODO
+        # NOTE: order is important
+        tables = [
+            "author",
+            "theme",
+            "place",
+            "iconography",
+            "r_iconography_place",
+            "r_iconography_theme",
+        ]
+        # tablename -> { colname: sql type }
+        type_mapper = { "place": {"loc": sa_types.JSON, "vector": sa_types.JSON}  }
+        
+        nrows_total = 0
+
+        print("beginning table creation...")
+
+        # insert !
+        params = { "if_exists": "fail", "index": False,  }
+        with self.sqlite_engine.begin() as conn:
+            for table in tables:
+                df = getattr(self, f"df_{table}")
+
+                nrows = df.shape[0]
+                nrows_total += nrows
+                print(f"* inserting {table} ({nrows} rows)")
+
+                params = { "con": conn, **params }
+                if table in type_mapper: 
+                    params["dtype"] = type_mapper[table]
+                # remove leading `r_` from relation tablenames
+                table = re.sub(r"^r_", "", table)
+                df.to_sql(table, **params)
+
+        print(f"database insertion pipeline finished ! {len(tables)} tables, {nrows_total} rows inserted")
+        print(f"find the created database at: {PATH_DB}")
+        return
+
 
     def pipeline(self):
         (
@@ -356,9 +384,23 @@ class MigrationPipeline:
             ._cast_types()
             ._to_sql()
         )
-        print(self.df_iconography.columns)
-        print(self.df_place.columns)
+        return
+
 
 if __name__ == "__main__":
-    engine = make_pg_engine()
-    MigrationPipeline(pg_engine=engine).pipeline()
+    # init stuff
+    if not PATH_ENV.exists():
+        print(f".env file not found (looked at {PATH_ENV}). exiting...")
+        exit(1)
+
+    PATH_OUT.mkdir(exist_ok=True)
+    if PATH_DB.is_file():
+        PATH_DB.unlink()
+    dotenv.load_dotenv(PATH_ENV)
+
+    # create engines
+    pg_engine = make_engine("postgresql")
+    sqlite_engine = make_engine("sqlite")
+
+    # make migration and create new db
+    MigrationPipeline(pg_engine=pg_engine, sqlite_engine=sqlite_engine).pipeline()
