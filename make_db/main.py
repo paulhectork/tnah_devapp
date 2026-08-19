@@ -114,21 +114,40 @@ class Database:
             f"Examples: {list(unmatched)[:5]}"
         )
 
-    def pipeline(self):
+    def pipeline(self):        
         # move title from its own foreign table to df_iconography.title => df_title becomes useless
-        s_titles = self.df_title[self.df_title.ismain == True].set_index("id_iconography")["entry_name"]
-        self.df_iconography["title"] = self.df_iconography["id"].map(s_titles)
+        self.df_title = (
+            self.df_title[self.df_title.ismain == True]
+            [["id_iconography", "entry_name"]]
+            .rename(columns={"entry_name": "title"})
+        )
         self._assert_join_ok(self.df_title, self.df_iconography, "id_iconography", "id")
-        self.df_iconography.loc[self.df_iconography.title.isna()].title = "Sans titre"
 
-        # move address name from its own table to df_place => df_address becomes useless. 
-        df_address = self.df_address.loc[self.df_address.source=="contemporain"]
-        df_r_address_place = self.df_r_address_place.loc[self.df_r_address_place.id_address.isin(df_address.id)] 
-        df_address = self.df_address.set_index("id")["address"]
-        print(df_address)
-        df_r_address_place["address"] = df_r_address_place["id_address"].map(df_address)
-        print(df_r_address_place[["id_address", "address"]])
-        # df_r_address_place.address = self.df_address.loc[r_address_place.id_address
+        self.df_iconography = self.df_iconography.merge(
+            self.df_title, left_on="id", right_on="id_iconography", how="left"
+        ).drop(columns="id_iconography")
+        self.df_iconography.loc[self.df_iconography.title.isna(), "title"] = "Sans titre"
+
+
+        # move address name from its own table to df_place => df_address becomes useless
+        # 1. remove from `df_address` and `df_r_address_place` all rows there source != "contemporain": we keep only 'contemporain''s addresses 
+        self.df_address = self.df_address.loc[self.df_address.source == "contemporain"]
+        self.df_r_address_place = self.df_r_address_place.loc[
+            self.df_r_address_place.id_address.isin(self.df_address.id)
+        ]
+        # 2. move `df_address.address` to `df_r_address_place.address`
+        self.df_r_address_place = self.df_r_address_place.merge(
+            self.df_address[["id", "address"]], left_on="id_address", right_on="id", how="left"
+        )
+        self._assert_join_ok(self.df_place, self.df_r_address_place, "id", "id_place")
+        # 3. move `df_r_address_place.address` to `df_place.address`
+        self.df_place = self.df_place.merge(
+            self.df_r_address_place[["id_place", "address"]],
+            left_on="id", right_on="id_place", how="left"
+        ).drop(columns="id_place")
+        self._assert_join_ok(self.df_place, self.df_r_address_place, "id_address")
+        # NOTE: delete df_place.id_address
+        print(self.df_place)
 
 if __name__ == "__main__":
     engine = make_pg_engine()
