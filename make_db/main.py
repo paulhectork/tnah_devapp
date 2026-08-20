@@ -1,16 +1,14 @@
 import os
 import re
 import json
-import asyncio
+import random
 from pathlib import Path
 from typing import Any, Literal
 
-import tenacity
-import aiohttp
 import dotenv
 import pandas as pd
 import numpy as np
-from tqdm.asyncio import tqdm_asyncio
+from tqdm import tqdm
 from sqlalchemy import create_engine, URL
 from sqlalchemy.engine import Engine
 from sqlalchemy import types as sa_types
@@ -86,86 +84,7 @@ class MigrationPipeline:
         # create database
         self.pg_engine = kwargs.get("pg_engine")
         self.sqlite_engine = kwargs.get("sqlite_engine")
-
-        # async stuff
-        # _session is defined in `__aenter__` / closed in `__aexit__`
-        self.max_connections = 1 # NIK GALLICA et ses blocages expresssssssss
-        self._session: aiohttp.ClientSession | None = None
-        self.semaphore = asyncio.Semaphore(self.max_connections)
         return
-
-    # NOTE: defining __aenter__ / __aexit__ turns this clas into an async content manager
-    async def __aenter__(self) -> "SasExporterBase":
-        self._session = aiohttp.ClientSession(
-            # NOTE TCPConnector limit must be higher than Semaphore limit
-            # so that the aiohttp.Session queue is always empty
-            # (otherwise, risk of timeouts, stale connections etc.)
-            connector=aiohttp.TCPConnector(limit=self.max_connections+5),
-            # NOTE: useful to avoid getting blocked by the server
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-
-            },
-            timeout=aiohttp.ClientTimeout(
-                total=None,        # no hard cap on the full lifecycle
-                connect=None,      # no cap on pool wait + sock_connect combined
-                sock_connect=10,   # timeout for TCP handshake/DNS only, excludes pool wait
-                sock_read=30       # timeout waiting for server response after request is sent
-            )
-        )
-        return self
-
-    async def __aexit__(self, *args) -> None:
-        if self._session:
-            await self._session.close()
-            self._session = None
-
-    @property
-    def session(self) -> aiohttp.ClientSession:
-        if self._session is None:
-            raise RuntimeError(f"{self.__class__} must be used as an async context manager")
-        return self._session
-    
-    # asynchronous fetch
-    # retry 5 times, waiting 1-5 seconds between each
-    @tenacity.retry(
-        retry=tenacity.retry_if_exception_type(aiohttp.ClientResponseError),
-        stop=tenacity.stop_after_attempt(5),
-        wait=tenacity.wait_exponential(multiplier=1, min=1, max=5),
-        reraise=True  # if it still fails, raise the original error instead of tenacity.RetryError.
-    )
-    async def _fetch_to_json(self, url: str) -> dict:
-        async with self.semaphore:
-            async with self.session.get(url) as response:
-                response.raise_for_status()
-                r_text = await response.text()
-        return json.loads(r_text)
-    
-    async def _get_iiif_images(self):
-        errors = []
-    
-        async def inner(iiif_url: str) -> str:
-            try:
-                manifest = await self._fetch_to_json(url=iiif_url)
-                id_img = manifest["sequences"][0]["canvases"][0]["images"][0]["resource"]["@id"]
-                id_img.replace("/full/full/", "/full/1000/")  # clip size to 1000px
-                return id_img
-            except Exception as e:
-                errors.append(iiif_url)
-                print(f"failed to fetch {iiif_url}: {e!r}")
-                return None
-            
-        df = self.df_iconography[["id", "iiif_url"]].loc[~self.df_iconography.iiif_url.isna()].copy()
-        iiif_url_list = df["iiif_url"].unique()
-
-        df["iiif_image_url"] = await tqdm_asyncio.gather(
-            *[ inner(iiif_url) for iiif_url in iiif_url_list ],
-            desc="fetching IIIF image URLs"
-        )
-        if len(errors):
-            print(f"{len(errors)} errors exporting data: {errors}")
-
-        return self
 
     # return a generator of (df_name, df) for each dataframe defined in `self` 
     def _get_dfs(self):
@@ -359,8 +278,18 @@ class MigrationPipeline:
             df["richelieu_url"] = df["id_uuid"].apply(f)
             setattr(self, df_name, df)
         return self
+    
+    # NOTE: instead of fetching the manifests to retrieve an image, we just do a regex-based reconstruction of the image URL.
+    # gallica is just too annoying to request and i've been blocked nonstop from it.
+    def _get_iiif_images(self):
+        self.df_iconography["iiif_image_url"] = None
+        mask = ~self.df_iconography.iiif_url.isna()
+        print(self.df_iconography.loc[mask, "iiif_image_url"])
+        self.df_iconography.loc[mask, "iiif_image_url"] = self.df_iconography.loc[mask, "iiif_url"].str.replace("/manifest.json", "/f1/full/1000/0/native.jpg")
+        print(self.df_iconography.loc[mask, "iiif_image_url"].to_list())
+        return self
 
-    def _drop_fields(self):
+    def _drop_and_rename_fields(self):
         """
         drop useless fields from each table + rename fields
         """
@@ -372,8 +301,8 @@ class MigrationPipeline:
         # tablename -> [ [fields to keep], {fields to rename} ]
         mapper = {
             "df_iconography": [
-                ['id', 'title', 'date', 'iiif_url', 'source_url', 'richelieu_url', 'id_author'],
-                {}
+                ['id', 'title', 'date', 'iiif_url', 'iiif_image_url', 'source_url', 'richelieu_url', 'id_author'],
+                {"iiif_url": "iiif_manifest_url"}
             ],
             "df_author": [
                 ['id', 'entry_name'],
@@ -458,27 +387,18 @@ class MigrationPipeline:
         print(f"find the created database at: {PATH_DB}")
         return
 
-
-    async def pipeline_async(self):
-        async with self:        
-            (
-                self
-                ._populate()
-                ._joins()
-            )
-            await self._get_iiif_images()
-            (
-                self
-                ._add_urls()
-                ._drop_fields()
-                ._cast_types()
-                ._to_sql()
-            )
-        return
-
     def pipeline(self):
-        asyncio.run(self.pipeline_async())
-
+        (
+            self
+            ._populate()
+            ._joins()
+            ._get_iiif_images()
+            ._add_urls()
+            ._drop_and_rename_fields()
+            ._cast_types()
+            ._to_sql()
+        )
+        
 
 if __name__ == "__main__":
     # init stuff
@@ -497,4 +417,107 @@ if __name__ == "__main__":
 
     # make migration and create new db
     MigrationPipeline(pg_engine=pg_engine, sqlite_engine=sqlite_engine).pipeline()
+
+
+# NOTE:backup of async stuff in MigrationPipeline
+#   Gallica is unfortunately too difficult to work with .,
+# 
+# import asyncio
+# import tenacity
+# from tqdm.asyncio import tqdm_asyncio
+# 
+#     # NOTE: in __init__
+#         # async stuff
+#         # _session is defined in `__aenter__` / closed in `__aexit__`
+#         self.max_connections = 1 # NIK GALLICA et ses blocages expresssssssss
+#         self._session: aiohttp.ClientSession | None = None
+#         self.semaphore = asyncio.Semaphore(self.max_connections)
+#         return
+# 
+#     # NOTE: defining __aenter__ / __aexit__ turns this clas into an async content manager
+#     async def __aenter__(self) -> "SasExporterBase":
+#         self._session = aiohttp.ClientSession(
+#             # NOTE TCPConnector limit must be higher than Semaphore limit
+#             # so that the aiohttp.Session queue is always empty
+#             # (otherwise, risk of timeouts, stale connections etc.)
+#             connector=aiohttp.TCPConnector(limit=self.max_connections+5),
+#             # NOTE: useful to avoid getting blocked by the server
+#             headers = {
+#                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+# 
+#             },
+#             timeout=aiohttp.ClientTimeout(
+#                 total=None,        # no hard cap on the full lifecycle
+#                 connect=None,      # no cap on pool wait + sock_connect combined
+#                 sock_connect=10,   # timeout for TCP handshake/DNS only, excludes pool wait
+#                 sock_read=30       # timeout waiting for server response after request is sent
+#             )
+#         )
+#         return self
+# 
+#     async def __aexit__(self, *args) -> None:
+#         if self._session:
+#             await self._session.close()
+#             self._session = None
+# 
+#     @property
+#     def session(self) -> aiohttp.ClientSession:
+#         if self._session is None:
+#             raise RuntimeError(f"{self.__class__} must be used as an async context manager")
+#         return self._session
+#     
+#     # asynchronous fetch
+#     # retry 5 times, waiting 1-5 seconds between each
+#     @tenacity.retry(
+#         retry=tenacity.retry_if_exception_type(aiohttp.ClientResponseError),
+#         stop=tenacity.stop_after_attempt(5),
+#         wait=tenacity.wait_exponential(multiplier=1, min=1, max=5),
+#         reraise=True  # if it still fails, raise the original error instead of tenacity.RetryError.
+#     )
+#     async def _fetch_to_json(self, url: str) -> dict:
+#         async with self.semaphore:
+#             async with self.session.get(url) as response:
+#                 response.raise_for_status()
+#                 r_text = await response.text()
+#         return json.parse(r_text)
+# 
+#     async def _get_iiif_images(self):
+#         errors = []
+#         async def inner(iiif_url: str) -> str:
+#             try:
+#                 manifest = await self._fetch_to_json(url=iiif_url)
+#                 id_img = id_img.replace("/full/full/", "/full/1000/")  # clip size to 1000px
+#                 return id_img
+#             except Exception as e:
+#                 errors.append(iiif_url)
+#                 print(f"failed to fetch {iiif_url}: {e!r}")
+#                 return None
+#         df = self.df_iconography[["id", "iiif_url"]].loc[~self.df_iconography.iiif_url.isna()].copy()
+#         df["iiif_image_url"] = await tqdm_asyncio.gather(
+#             *[ inner(iiif_url) for iiif_url in df.iiif_url ],
+#             desc="fetching IIIF image URLs"
+#         )
+#         # TODO complete self.df_iconography with df.iiif_image_url
+# 
+#     async def pipeline_async(self):
+#         async with self:        
+#             (
+#                 self
+#                 ._populate()
+#                 ._joins()
+#             )
+#             await self._get_iiif_images()
+#             (
+#                 self
+#                 ._add_urls()
+#                 ._drop_and_rename_fields()
+#                 ._cast_types()
+#                 ._to_sql()
+#             )
+#         return
+# 
+#     async def pipeline(self):
+#         asyncio.run(self.pipeline_async())
+
+
 
