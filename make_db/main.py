@@ -103,7 +103,7 @@ class MigrationPipeline:
         return
 
     # return a generator of (df_name, df) for each dataframe defined in `self` 
-    def _get_dfs(self):
+    def _iter_dfs(self):
         # df_name -> df
         df_dict = { 
             k: v 
@@ -313,7 +313,7 @@ class MigrationPipeline:
         """
         drop useless fields from each table + rename fields
         """
-        for df_name, df in self._get_dfs():
+        for df_name, df in self._iter_dfs():
             # drop id_uuid fields
             df = df[[ c for c in df.columns if c != "id_uuid" ]]
             setattr(self, df_name, df)
@@ -352,7 +352,7 @@ class MigrationPipeline:
             return (x.lower, x.upper) if isinstance(x, NumericRange) else (np.nan, np.nan)
 
         # transform `date` in `date_lower` and `date_upper` columns
-        for df_name, df in self._get_dfs():
+        for df_name, df in self._iter_dfs():
             if "date" in df.columns:
                 df["date"] = df["date"].apply(numericrange_to_inttuple)
                 df["date_lower"] = df["date"].apply(lambda x: x[0])
@@ -363,10 +363,45 @@ class MigrationPipeline:
         # nullable FKs should contain mixed types: int+None. in Pandas, that's impossible 
         # and ints are converted to float, none to np.nan. 
         # => cast to pd.Int64Dtype, which allows both int and nan values
-        for df_name, df in self._get_dfs():
+        for df_name, df in self._iter_dfs():
             cols = [c for c in df.columns if c.startswith("id") or c.startswith("date")]
             df[cols] = df[cols].astype(pd.Int64Dtype())
             setattr(self, df_name, df)
+        return self
+
+    # TODO: FIX FUNCTION BELOW
+    #   THE GOAL IS TO REINDEX BNF IDS STARTING FROM 1m, BUT THE NUMBER OF 
+    #   NAN FOREIGN KEYS INCREASES AFTER THE REPLACEMENT
+    #   MY GUESS IS THAT THE PROBLEM IS THAT FOREIGN KEYS TO ID_ICONOGRAPHY 
+    #   CONTAIN IDS THAT POINT TO STH NOT FROM THE BNF CORPUS => INEXISTANT 
+    #   FROM ICONOGRAPHY.ID => SHOULD NOT BE HERE ANYWAYS
+    #   => DO CHECK AND USE THIS FUNCTION TO DROP EVEYRTHING WITH NO REFERENCE
+    #   TO BNF ANYWAYS 
+
+    # since we have selected only BNF rows, iconography.id values are weird (don´t start from 0)
+    # reset their ids using a continuous 0..n and propagate to foreign keys  
+    def _reset_ids(self):
+        df_mapper = self.df_iconography[["id"]]
+        df_mapper["id_og"] = df_mapper["id"].astype(int)
+        df_mapper["id"] = df_mapper.index + 1
+        df_mapper = df_mapper.set_index("id_og").rename(columns={"id": "id_iconography"})
+        s_mapper = df_mapper["id_iconography"]
+        print("S_MAPPER:::::::::::::::::::")
+        print(s_mapper)
+
+        for df_name, df in self._iter_dfs():
+            if "id_iconography" in df.columns:
+                get_isna = lambda: df.loc[df.id_iconography.isna()].shape[0]
+                isna_pre = get_isna()
+                print("DF::::::::::::::::::::::::", df_name) 
+                print("PRE:::::::::::::::::::::::")
+                print(df.id_iconography)
+                print("POST::::::::::::::::::::::")
+                df.id_iconography = df.id_iconography.astype("Int64").map(s_mapper)
+                print(df.id_iconography)
+                isna_post = get_isna()
+                assert isna_pre == isna_post, f"isna_pre={isna_pre}, isna_post={isna_post}, notna={df.shape[0]-isna_post}, total={df.shape[0]}"
+
         return self
 
     def _to_sql(self):
@@ -421,6 +456,7 @@ class MigrationPipeline:
             ._drop_null_rows()
             ._drop_and_rename_fields()
             ._cast_types()
+            ._reset_ids()
             ._to_sql()
         )
         
