@@ -17,10 +17,10 @@ from psycopg2._range import NumericRange
 PATH_DIR = Path(__file__).parent.resolve()
 PATH_ROOT = PATH_DIR.parent.resolve()  # tnah_devapp/ folder
 PATH_ENV = PATH_DIR / ".env"
-PATH_OUT = PATH_DIR / "out"
+PATH_OUT = PATH_ROOT
 PATH_DB = PATH_OUT / "richelieu.db"
 
-PATH_DB_SCHEMA = PATH_ROOT / "richelieu_schema.sql"
+PATH_DB_SCHEMA = PATH_OUT / "richelieu_schema.sql"
 
 # registry of { TABLENAME: COLUMNS_TO_KEEP } to read from the input postgres db
 KEEP_INPUT = {
@@ -76,6 +76,7 @@ def make_engine(flavor: Literal["sqlite", "postgresql"]) -> Engine:
     return create_engine(url, echo=False)
 
 
+# create the structure of the output database from an SQLite schema definition
 def create_output_database(engine: Engine):
     with open(PATH_DB_SCHEMA, mode="r") as f:
         sql_schema = f.read()
@@ -302,6 +303,12 @@ class MigrationPipeline:
         self.df_iconography.loc[mask, "iiif_image_url"] = self.df_iconography.loc[mask, "iiif_url"].str.replace("/manifest.json", "/f1/full/1000/0/native.jpg")
         return self
 
+    # drop rows violating null constraints on our db
+    # there are more constraints in the schema but afaik no other constraint is violated here
+    def _drop_null_rows(self):
+        self.df_iconography = self.df_iconography.loc[~self.df_iconography.iiif_url.isna()]
+        return self
+
     def _drop_and_rename_fields(self):
         """
         drop useless fields from each table + rename fields
@@ -319,15 +326,15 @@ class MigrationPipeline:
             ],
             "df_author": [
                 ['id', 'entry_name'],
-                { "entry_name": "name" }
+                { "entry_name": "author_name" }
             ],
             "df_place": [
                 ['id', 'address', 'date', 'richelieu_url', 'centroid', 'vector'],
-                { "centroid": "loc" }
+                { "centroid": "loc", "vector": "plot" }
             ],
             "df_theme": [
                 ['id', 'entry_name', 'richelieu_url'],
-                { "entry_name": "name" }
+                { "entry_name": "theme_name" }
             ],
         }
         for df_name, [cols, rename_mapper] in mapper.items():
@@ -373,7 +380,7 @@ class MigrationPipeline:
             "r_iconography_theme",
         ]
         # tablename -> { colname: sql type }
-        type_mapper = { "place": {"loc": sa_types.JSON, "vector": sa_types.JSON}  }
+        type_mapper = { "place": {"loc": sa_types.JSON, "plot": sa_types.JSON}  }
         
         nrows_total = 0
 
@@ -411,6 +418,7 @@ class MigrationPipeline:
             ._joins()
             ._get_iiif_images()
             ._add_urls()
+            ._drop_null_rows()
             ._drop_and_rename_fields()
             ._cast_types()
             ._to_sql()
