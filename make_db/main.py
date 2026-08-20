@@ -364,7 +364,7 @@ class MigrationPipeline:
         # and ints are converted to float, none to np.nan. 
         # => cast to pd.Int64Dtype, which allows both int and nan values
         for df_name, df in self._get_dfs():
-            cols = [c for c in df.columns if c.startswith("id")]
+            cols = [c for c in df.columns if c.startswith("id") or c.startswith("date")]
             df[cols] = df[cols].astype(pd.Int64Dtype())
             setattr(self, df_name, df)
         return self
