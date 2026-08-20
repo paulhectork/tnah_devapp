@@ -9,15 +9,18 @@ import dotenv
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-from sqlalchemy import create_engine, URL
+from sqlalchemy import create_engine, text, URL
 from sqlalchemy.engine import Engine
 from sqlalchemy import types as sa_types
 from psycopg2._range import NumericRange
 
 PATH_DIR = Path(__file__).parent.resolve()
+PATH_ROOT = PATH_DIR.parent.resolve()  # tnah_devapp/ folder
 PATH_ENV = PATH_DIR / ".env"
 PATH_OUT = PATH_DIR / "out"
 PATH_DB = PATH_OUT / "richelieu.db"
+
+PATH_DB_SCHEMA = PATH_ROOT / "richelieu_schema.sql"
 
 # registry of { TABLENAME: COLUMNS_TO_KEEP } to read from the input postgres db
 KEEP_INPUT = {
@@ -71,6 +74,18 @@ def make_engine(flavor: Literal["sqlite", "postgresql"]) -> Engine:
     else:
         url = f"sqlite:///{PATH_DB}"
     return create_engine(url, echo=False)
+
+
+def create_output_database(engine: Engine):
+    with open(PATH_DB_SCHEMA, mode="r") as f:
+        sql_schema = f.read()
+    # sqlite can only execute 1 statement at a time
+    sql_statements = sql_schema.split(";")
+    with engine.begin() as conn:
+        for statement in sql_statements:
+            conn.execute(text(statement))
+    print(f"created database from schema: '{PATH_DB_SCHEMA}'")
+    return 
 
 
 class MigrationPipeline:
@@ -284,9 +299,7 @@ class MigrationPipeline:
     def _get_iiif_images(self):
         self.df_iconography["iiif_image_url"] = None
         mask = ~self.df_iconography.iiif_url.isna()
-        print(self.df_iconography.loc[mask, "iiif_image_url"])
         self.df_iconography.loc[mask, "iiif_image_url"] = self.df_iconography.loc[mask, "iiif_url"].str.replace("/manifest.json", "/f1/full/1000/0/native.jpg")
-        print(self.df_iconography.loc[mask, "iiif_image_url"].to_list())
         return self
 
     def _drop_and_rename_fields(self):
@@ -367,7 +380,7 @@ class MigrationPipeline:
         print("beginning table creation...")
 
         # insert !
-        params = { "if_exists": "fail", "index": False,  }
+        params = { "if_exists": "append", "index": False }
         with self.sqlite_engine.begin() as conn:
             for table in tables:
                 df = getattr(self, f"df_{table}")
@@ -379,6 +392,10 @@ class MigrationPipeline:
                 params = { "con": conn, **params }
                 if table in type_mapper: 
                     params["dtype"] = type_mapper[table]
+                else:
+                    # let sqlite handle type coercion
+                    params["dtype"] = False
+
                 # remove leading `r_` from relation tablenames
                 table = re.sub(r"^r_", "", table)
                 df.to_sql(table, **params)
@@ -409,11 +426,18 @@ if __name__ == "__main__":
     PATH_OUT.mkdir(exist_ok=True)
     if PATH_DB.is_file():
         PATH_DB.unlink()
+    if not PATH_DB_SCHEMA.is_file():
+        print(f"schema of the output database not found (looked at: '{PATH_DB_SCHEMA}') ! can't guarantee schema of created database. exiting...")
+        exit(1)
+
     dotenv.load_dotenv(PATH_ENV)
 
     # create engines
     pg_engine = make_engine("postgresql")
     sqlite_engine = make_engine("sqlite")
+
+    # create output database schema by executing SQL schema defined at root of tnah_devapp
+    create_output_database(sqlite_engine)
 
     # make migration and create new db
     MigrationPipeline(pg_engine=pg_engine, sqlite_engine=sqlite_engine).pipeline()
