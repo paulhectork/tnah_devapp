@@ -5,12 +5,16 @@
 ## pipeline
 
 une fois la base de données importée dans postgres, le script python:
-- lit certaines tables en dataframes
+- supprime la base sqlite préeexistante si besoin
+- crée une nouvelle base sqlite dans `../richelieu.db` et définit son schema
+    à partir de `../richelieu_schema.db`
+- lit certaines tables de la base postgres en dataframes
 - supprime ou simplifie des jointures entre tables
-- supprime certaines colonnes
-- retype et renomme certaines colonnes
 - pour chaque manifeste IIIF, séléctionne l'URL IIIF d'une image à afficher
     pour chaque ressource
+- supprime certaines colonnes
+- retype et renomme certaines colonnes
+- s'assure que les contraintes de notre base de sortie sont respectées
 
 ---
 

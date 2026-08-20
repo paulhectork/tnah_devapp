@@ -2,6 +2,4 @@ pandas
 psycopg2-binary
 sqlalchemy
 dotenv
-aiohttp
 tqdm
-tenacity
