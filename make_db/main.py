@@ -23,6 +23,7 @@ PATH_DB = PATH_OUT / "richelieu.db"
 PATH_DB_SCHEMA = PATH_OUT / "richelieu_schema.sql"
 
 # registry of { TABLENAME: COLUMNS_TO_KEEP } to read from the input postgres db
+# NOTE: tables not mentionned here are dropped
 KEEP_INPUT = {
     # full list: [ "id", "id_uuid", "id_richelieu", "iiif_url", "iiif_folio", "source_url", "date_source", "date_corr", "date", "technique", "description", "inscription", "corpus", "inventory_number", "produced", "represents", "id_licence" ],
     "iconography": [ "id", "id_uuid", "iiif_url", "source_url", "date", "technique", "corpus" ],
@@ -38,8 +39,8 @@ KEEP_INPUT = {
     "theme": [ "id", "id_uuid", "entry_name", "description", "category", "category_slug" ],
     # full list:  [ "id", "id_uuid", "entry_name", "description" ]
     "institution": [ "id", "id_uuid", "entry_name"],
-    # full list:  [   "id", "id_uuid", "id_iconography", "id_cartography", "id_directory", "id_institution" ]
-    "r_institution": [ "id", "id_uuid", "id_iconography", "id_cartography", "id_directory", "id_institution" ],
+    # full list:  [   "id", "id_uuid", "id_iconography",  "id_cartography", "id_directory", "id_institution" ]
+    "r_institution": [ "id", "id_uuid", "id_iconography", "id_institution" ],
     # full list: [ "id", "id_uuid", "id_address", "id_place" ]
     "r_address_place": [ "id", "id_address", "id_place" ],
     # full list: [ "id", "id_uuid", "id_iconography", "id_place" ]
@@ -48,8 +49,8 @@ KEEP_INPUT = {
     "r_iconography_theme": [ "id", "id_iconography", "id_theme" ],
     # full list: [ "id", "id_uuid", "id_iconography", "id_actor", "role", "ismain" ]
     "r_iconography_actor": [ "id", "id_iconography", "id_actor", "role", "ismain" ],
-    # full list: [ "id", "id_uuid", "id_cartography", "id_place" ]
-    "r_cartography_place": [ "id", "id_cartography", "id_place" ],
+    # # full list: [ "id", "id_uuid", "id_cartography", "id_place" ]
+    # "r_cartography_place": [ "id", "id_cartography", "id_place" ],
 }
 
 
@@ -197,13 +198,19 @@ class MigrationPipeline:
         # INSTITUTION
         # - keep only the inconography rows for institution=BNF
         # - delete r_institution and institution tables
-        id_bnf = self.df_institution.loc[self.df_institution.entry_name.eq("Bibliothèque nationale de France")].id.squeeze()
+        bnf = "Bibliothèque nationale de France"
+        id_bnf = self.df_institution.loc[self.df_institution.entry_name.eq(bnf)].id.squeeze()
+        # iconography IDs to keep
         s_iconography = self.df_r_institution.loc[
             self.df_r_institution.id_institution.eq(id_bnf)
             & ~self.df_r_institution.id_iconography.isna()
         ]["id_iconography"]
-        self.df_iconography = self.df_iconography.loc[self.df_iconography.id.isin(s_iconography)]
-        assert self.df_iconography.shape[0] == s_iconography.shape[0], f"expected shape shapes after dropping other institutions"
+        mask = self.df_iconography.id.isin(s_iconography)
+        self.df_iconography.loc[mask, "institution"] = "Bibliothèque nationale de France"
+        # NOTE: those rows are deleted in `_filter_rows`
+        self.df_iconography.loc[~mask, "institution"] = None
+        icono_bnf_count = self.df_iconography.loc[self.df_iconography.institution.eq(bnf)].shape[0]
+        assert icono_bnf_count == s_iconography.shape[0], f"expected {s_iconography.shape[0]} iconography ressources for institution '{bnf}', got {icono_bnf_count}"
         
         # TITLE
         # move title from its own foreign table to df_iconography.title => df_title becomes useless
@@ -303,10 +310,97 @@ class MigrationPipeline:
         self.df_iconography.loc[mask, "iiif_image_url"] = self.df_iconography.loc[mask, "iiif_url"].str.replace("/manifest.json", "/f1/full/1000/0/native.jpg")
         return self
 
-    # drop rows violating null constraints on our db
-    # there are more constraints in the schema but afaik no other constraint is violated here
-    def _drop_null_rows(self):
-        self.df_iconography = self.df_iconography.loc[~self.df_iconography.iiif_url.isna()]
+    # - drop rows violating null constraints on our db
+    # - keep only rows where iconography == "bnf"
+    # - cascade the above: drop rows from other tables that have no relationship to iconography
+    def _filter_rows(self):
+        # REGISTER OF PROCESSED TABLES TO AVOID INFINITE RECURSION
+        processed = []
+        def drop_cascade(df: pd.DataFrame, df_name: str, colname: str, keep_vals: pd.Series) -> pd.DataFrame:
+            """
+            `colname` is a foreign key column.
+            delete rows from `df` where `df[colname]` is not in `keep_vals`. 
+            if `df` contains a foreign key to another table, propagate deletion: 
+            select this foreign table (`df_foreign`) and recursively delete rows 
+            where `df_foreign[id]` is not in `df.id`. repeat with foreign keys in 
+            `df_foreign` until all cascades have been completed.
+            (i.e.: delete rows from df_r_iconography_theme without a reference to df_iconography. 
+            then, delete rows in df_theme not referenced to df_r_iconography_theme)
+            (foreign key column is named `{foreign_df_name.replace("^df_", "id_")}`, 
+            hence how we can target the foreign tables from foreign keys directly)
+            """
+            if colname in df.columns:
+                # size_pre = df.shape[0]
+                df = df.loc[df[colname].isin(keep_vals)]
+                # size_post = df.shape[0]
+                # print(f"* (curr) working on: {df_name}[{colname}]")
+                # print(f"* (curr) dropped {100*(size_pre-size_post)/size_pre}% rows ({size_pre-size_post} dropped, # post rows: {size_post})")
+                fk_cols = [col for col in df.columns if col.startswith("id_") and col != "id_uuid"]
+                setattr(self, df_name, df)
+                # avoid infinite recursion by keeping a register of processed tables 
+                processed.append(df_name)
+                for fk_col in fk_cols:
+                    foreign_df_name = re.sub(r"^id_", "df_", fk_col)
+                    if foreign_df_name in processed:
+                        continue
+                    foreign_keep_vals = df[fk_col]
+                    foreign_colname = "id"
+                    foreign_df = getattr(self, foreign_df_name)
+                    # print("* (next) foreign_df_name:", foreign_df_name)
+                    # print("* (next) foreign_colname:", foreign_colname)
+                    # print("*"*10)
+                    drop_cascade(foreign_df, foreign_df_name, foreign_colname, foreign_keep_vals)
+            return
+
+        self.df_iconography = self.df_iconography.loc[
+            ~self.df_iconography.iiif_url.isna()
+            & self.df_iconography.institution.eq("Bibliothèque nationale de France")
+        ]
+        # propagate above deletion of rows in self.df_iconography 
+        s_iconography_ids = self.df_iconography.id
+        for df_name, df in self._iter_dfs():
+            if df_name == "df_iconography":
+                continue
+            if "id_iconography" in df.columns:
+                drop_cascade(df, df_name, "id_iconography", s_iconography_ids)
+        return self
+
+    # in `_filter_rows` we slice each table to keep only rows that will end up referencing
+    # iconography rows where institution = bnf
+    # => table ids are now discontinuous => reset all id cols in all tables by 1..n 
+    # and propagate to foreign key cols 
+    def _reset_ids(self):
+        # count number of nan values in a series to check that no data loss happened in a resetting
+        print([df_name for df_name, _ in self._iter_dfs()])
+        isna_count = lambda s: s[s.notnull()].shape[0]
+
+        for df_name, df in self._iter_dfs():
+            fk_name = re.sub("^df_", "id_", df_name)
+            df["id_og"] = df.id
+            # replace the old ID with a new one (int, autoincremented) 
+            df.id = np.arange(1, df.shape[0] + 1)
+            # make a mapper of (old_id, new_id) to update foreign keys to `df` in other columns. 
+            # for the map to work in pandas the name of the mapper series MUST be the same as the 
+            # name of the column whose values we want to update => mapper series must be named `fk_name`, 
+            # because the fk to `df` in other tables is also named `fk_name`. 
+            s_mapper = (
+                df[["id", "id_og"]]
+                .set_index("id_og")
+                .rename(columns={"id": fk_name})
+                [fk_name]
+            )
+            # drop the "id_og" column
+            df = df[[ col for col in df.columns if col != "id_og" ]]
+            setattr(self, df_name, df)
+            # update foreign keys to `df` in other tables
+            for foreign_df_name, foreign_df in self._iter_dfs():
+                if df_name != foreign_df_name and fk_name in foreign_df.columns:
+                    isna_pre = isna_count(foreign_df[fk_name])
+                    foreign_df[fk_name] = foreign_df[fk_name].map(s_mapper)
+                    isna_post = isna_count(foreign_df[fk_name])
+                    print(isna_post)
+                    assert isna_pre == isna_post, f"foreign keys lost in: _reset_ids. col: {foreign_df_name}[{fk_name}], pre={isna_pre}, post={isna_post}, change={isna_pre-isna_post}"
+                    setattr(self, foreign_df_name, foreign_df)
         return self
 
     def _drop_and_rename_fields(self):
@@ -369,41 +463,6 @@ class MigrationPipeline:
             setattr(self, df_name, df)
         return self
 
-    # TODO: FIX FUNCTION BELOW
-    #   THE GOAL IS TO REINDEX BNF IDS STARTING FROM 1m, BUT THE NUMBER OF 
-    #   NAN FOREIGN KEYS INCREASES AFTER THE REPLACEMENT
-    #   MY GUESS IS THAT THE PROBLEM IS THAT FOREIGN KEYS TO ID_ICONOGRAPHY 
-    #   CONTAIN IDS THAT POINT TO STH NOT FROM THE BNF CORPUS => INEXISTANT 
-    #   FROM ICONOGRAPHY.ID => SHOULD NOT BE HERE ANYWAYS
-    #   => DO CHECK AND USE THIS FUNCTION TO DROP EVEYRTHING WITH NO REFERENCE
-    #   TO BNF ANYWAYS 
-
-    # since we have selected only BNF rows, iconography.id values are weird (don´t start from 0)
-    # reset their ids using a continuous 0..n and propagate to foreign keys  
-    def _reset_ids(self):
-        df_mapper = self.df_iconography[["id"]]
-        df_mapper["id_og"] = df_mapper["id"].astype(int)
-        df_mapper["id"] = df_mapper.index + 1
-        df_mapper = df_mapper.set_index("id_og").rename(columns={"id": "id_iconography"})
-        s_mapper = df_mapper["id_iconography"]
-        print("S_MAPPER:::::::::::::::::::")
-        print(s_mapper)
-
-        for df_name, df in self._iter_dfs():
-            if "id_iconography" in df.columns:
-                get_isna = lambda: df.loc[df.id_iconography.isna()].shape[0]
-                isna_pre = get_isna()
-                print("DF::::::::::::::::::::::::", df_name) 
-                print("PRE:::::::::::::::::::::::")
-                print(df.id_iconography)
-                print("POST::::::::::::::::::::::")
-                df.id_iconography = df.id_iconography.astype("Int64").map(s_mapper)
-                print(df.id_iconography)
-                isna_post = get_isna()
-                assert isna_pre == isna_post, f"isna_pre={isna_pre}, isna_post={isna_post}, notna={df.shape[0]-isna_post}, total={df.shape[0]}"
-
-        return self
-
     def _to_sql(self):
         # NOTE: order is important
         tables = [
@@ -451,12 +510,12 @@ class MigrationPipeline:
             self
             ._populate()
             ._joins()
+            ._filter_rows()
+            ._reset_ids()
             ._get_iiif_images()
             ._add_urls()
-            ._drop_null_rows()
             ._drop_and_rename_fields()
             ._cast_types()
-            ._reset_ids()
             ._to_sql()
         )
         
