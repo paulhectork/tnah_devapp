@@ -3,24 +3,28 @@
 {% block title_extra %}| Iconographie ({{ icono_corpus|length }} ressources){% endblock %}
 
 {% block main_content %}
+    <h1 class="title">Ressources iconographiques</h1>
+
     <p>Il y a <b>{{ icono_corpus|length }} ressources iconographiques</b> 
         sur ce site.</p>
 
     <ul class="columns is-multiline mt-1">
-        {% for item in icono_corpus %}
+        {% for icono_item in icono_corpus %}
             <li class="column is-one-third">
                 <div class="card border">
-                    <span cardlass="card-header">   
-                        <i class="card-header-title">{{ item.title }}</i>
-                    </span>
-                    <p class="card-content">
-                        {% if item.date_lower %}
-                            ({{ item.date_lower }}
-                        {% endif %}-{% if item.date_upper %}
-                            {{ item.date_upper }})
-                        {% endif %}
-                        {{ item.institution }}
-                    </p>
+                    <a href="{{ url_for('icono_main', id_icono=icono_item.id) }}">
+                        <span class="card-header">   
+                            <i class="card-header-title">{{ icono_item.title }}</i>
+                        </span>
+                        <p class="card-content">
+                            {% if icono_item.date_lower %}
+                                ({{ icono_item.date_lower }}
+                            {% endif %}-{% if icono_item.date_upper %}
+                                {{ icono_item.date_upper }})
+                            {% endif %}
+                            {{ icono_item.institution }}
+                        </p>
+                    </a>
                 </div>
             </li>
         {% endfor %}        

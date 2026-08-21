@@ -10,6 +10,9 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
 
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Tangerine">
+    <style>
+        {% block extra_css %}{% endblock %}
+    </style>
     </head>
     <body>
         {% include "includes/header.html" %}
