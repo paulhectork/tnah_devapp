@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Iconographie ({{ icono_corpus|length }} ressources){% endblock %}
+
+{% block main_content %}
+    <p>Il y a <b>{{ icono_corpus|length }} ressources iconographiques</b> 
+        sur ce site.</p>
+
+    <ul class="columns is-multiline mt-1">
+        {% for item in icono_corpus %}
+            <li class="column is-one-third">
+                <div class="card border">
+                    <span cardlass="card-header">   
+                        <i class="card-header-title">{{ item.title }}</i>
+                    </span>
+                    <p class="card-content">
+                        {% if item.date_lower %}
+                            ({{ item.date_lower }}
+                        {% endif %}-{% if item.date_upper %}
+                            {{ item.date_upper }})
+                        {% endif %}
+                        {{ item.institution }}
+                    </p>
+                </div>
+            </li>
+        {% endfor %}        
+    </ul>
+
+{% endblock %}
