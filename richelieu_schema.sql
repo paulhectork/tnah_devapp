@@ -25,6 +25,7 @@ CREATE TABLE iconography (
 	richelieu_url TEXT NOT NULL UNIQUE, 
 	date_lower INTEGER, 
 	date_upper INTEGER,
+	institution TEXT NOT NULL,
 	id_author INTEGER,
 	FOREIGN KEY (id_author) REFERENCES author(id)
 );

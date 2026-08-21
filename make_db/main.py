@@ -417,7 +417,7 @@ class MigrationPipeline:
         # tablename -> [ [fields to keep], {fields to rename} ]
         mapper = {
             "df_iconography": [
-                ['id', 'title', 'date', 'iiif_url', 'iiif_image_url', 'source_url', 'richelieu_url', 'id_author'],
+                ['id', 'title', 'date', 'iiif_url', 'iiif_image_url', 'source_url', 'richelieu_url', 'institution', 'id_author'],
                 {"iiif_url": "iiif_manifest_url"}
             ],
             "df_author": [
