@@ -130,8 +130,8 @@ class MigrationPipeline:
         # 1. duplicate keys on the right side make joins ambiguous / cause row multiplication
         dupes = df_right[right_col][df_right[right_col].duplicated()].unique()
         assert len(dupes) == 0, (
-            f"Duplicate values in df_right[{right_col!r}]: {list(dupes)[:5]} (total={len(dupes)}). "
-            f"A left join against this would produce unreliable results."
+            f"duplicate values in df_right[{right_col!r}]: {list(dupes)[:5]} (total={len(dupes)}). "
+            f"a left join against this would produce unreliable results."
         )
 
         # 2. existence check
@@ -139,9 +139,9 @@ class MigrationPipeline:
         right_ids = set(df_right[right_col].dropna())
         unmatched = left_ids - right_ids
         assert not unmatched, (
-            f"Join failed between {left_col!r} and {right_col!r}: "
+            f"join failed between {left_col!r} and {right_col!r}: "
             f"{len(unmatched)} value(s) in {left_col!r} have no match in {right_col!r}. "
-            f"Examples: {list(unmatched)[:5]}"
+            f"examples: {list(unmatched)[:5]}"
         )
 
         # 3. row-level correctness check (optional)
@@ -154,8 +154,8 @@ class MigrationPipeline:
                 actual = df_left[col]
                 mismatch = ~((expected == actual) | (expected.isna() & actual.isna()))
                 assert not mismatch.any(), (
-                    f"Merge produced incorrect values in column {col!r} for "
-                    f"{mismatch.sum()} row(s). Example bad rows (index): "
+                    f"merge produced incorrect values in column {col!r} for "
+                    f"{mismatch.sum()} row(s). example bad rows (index): "
                     f"{df_left.index[mismatch].tolist()[:5]}"
                 )
 
@@ -287,10 +287,8 @@ class MigrationPipeline:
 
         return self
 
+    # for each ressource where it's possible, add an URL to the Quartier Richelieu website page. 
     def _add_urls(self):
-        """
-        for each ressource where it's possible, add an URL to the Quartier Richelieu website page. 
-        """
         mapper = {
             "df_theme": lambda x: f"https://quartier-richelieu.inha.fr/theme/{x}",
             "df_iconography": lambda x: f"https://quartier-richelieu.inha.fr/iconographie/{x}",
@@ -307,13 +305,19 @@ class MigrationPipeline:
     def _get_iiif_images(self):
         self.df_iconography["iiif_image_url"] = None
         mask = ~self.df_iconography.iiif_url.isna()
-        self.df_iconography.loc[mask, "iiif_image_url"] = self.df_iconography.loc[mask, "iiif_url"].str.replace("/manifest.json", "/f1/full/1000/0/native.jpg")
+        self.df_iconography.loc[mask, "iiif_image_url"] = (
+            self.df_iconography
+            .loc[mask, "iiif_url"]
+            .str.replace("/manifest.json", "/f1/full/1000/0/native.jpg")
+        )
         return self
 
-    # - drop rows violating null constraints on our db
-    # - keep only rows where iconography == "bnf"
-    # - cascade the above: drop rows from other tables that have no relationship to iconography
     def _filter_rows(self):
+        """
+        - drop rows violating null constraints on our db
+        - keep only rows where iconography.institution == "Bibliothèque nationale de France"
+        - cascade the above: drop rows from other tables that have no relationship to iconography
+        """
         # REGISTER OF PROCESSED TABLES TO AVOID INFINITE RECURSION
         processed = []
         def drop_cascade(df: pd.DataFrame, df_name: str, colname: str, keep_vals: pd.Series) -> pd.DataFrame:
@@ -365,13 +369,14 @@ class MigrationPipeline:
                 drop_cascade(df, df_name, "id_iconography", s_iconography_ids)
         return self
 
-    # in `_filter_rows` we slice each table to keep only rows that will end up referencing
-    # iconography rows where institution = bnf
-    # => table ids are now discontinuous => reset all id cols in all tables by 1..n 
-    # and propagate to foreign key cols 
     def _reset_ids(self):
+        """
+        in `_filter_rows` we slice each table to keep only rows that will end up referencing
+        iconography rows where institution = bnf
+        => table ids are now discontinuous => reset all id cols in all tables by 1..n 
+        and propagate to foreign key cols 
+        """
         # count number of nan values in a series to check that no data loss happened in a resetting
-        print([df_name for df_name, _ in self._iter_dfs()])
         isna_count = lambda s: s[s.notnull()].shape[0]
 
         for df_name, df in self._iter_dfs():
@@ -398,15 +403,12 @@ class MigrationPipeline:
                     isna_pre = isna_count(foreign_df[fk_name])
                     foreign_df[fk_name] = foreign_df[fk_name].map(s_mapper)
                     isna_post = isna_count(foreign_df[fk_name])
-                    print(isna_post)
                     assert isna_pre == isna_post, f"foreign keys lost in: _reset_ids. col: {foreign_df_name}[{fk_name}], pre={isna_pre}, post={isna_post}, change={isna_pre-isna_post}"
                     setattr(self, foreign_df_name, foreign_df)
         return self
 
+    # drop useless fields from each table + rename fields
     def _drop_and_rename_fields(self):
-        """
-        drop useless fields from each table + rename fields
-        """
         for df_name, df in self._iter_dfs():
             # drop id_uuid fields
             df = df[[ c for c in df.columns if c != "id_uuid" ]]
@@ -438,10 +440,8 @@ class MigrationPipeline:
             setattr(self, df_name, df)
         return self
 
+    # cast columns to specific types
     def _cast_types(self):
-        """
-        cast to specific types
-        """
         def numericrange_to_inttuple(x: NumericRange|Any) -> tuple[int|float]:
             return (x.lower, x.upper) if isinstance(x, NumericRange) else (np.nan, np.nan)
 
@@ -546,7 +546,7 @@ if __name__ == "__main__":
     MigrationPipeline(pg_engine=pg_engine, sqlite_engine=sqlite_engine).pipeline()
 
 
-# NOTE:backup of async stuff in MigrationPipeline
+# NOTE: backup of async stuff in MigrationPipeline
 #   Gallica is unfortunately too difficult to work with .,
 # 
 # import asyncio
