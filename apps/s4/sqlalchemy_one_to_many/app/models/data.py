@@ -31,7 +31,6 @@ class Author(db.Model):
 
     iconography: Mapped["Iconography"] = relationship(
         back_populates="author", 
-        # TODO is this the proper cascade ?
         cascade="all, delete-orphan"
     )
 
