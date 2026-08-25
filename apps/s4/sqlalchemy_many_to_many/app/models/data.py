@@ -75,7 +75,7 @@ class Iconography(db.Model):
     richelieu_url: Mapped[str]
     date_lower: Mapped[Optional[int]]
     date_upper: Mapped[Optional[int]]
-    institution: Mapped[int]
+    institution: Mapped[str]
     id_author: Mapped[int] = mapped_column(ForeignKey("author.id"))
     
     author: Mapped["Author"] = relationship(
