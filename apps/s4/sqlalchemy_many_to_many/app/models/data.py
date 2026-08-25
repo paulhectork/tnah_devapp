@@ -78,14 +78,10 @@ class Iconography(db.Model):
     institution: Mapped[str]
     id_author: Mapped[int] = mapped_column(ForeignKey("author.id"))
     
-    author: Mapped["Author"] = relationship(
-        back_populates="iconography",
-        cascade="all, delete-orphan"
-    )
+    author: Mapped["Author"] = relationship(back_populates="iconography")
     theme: Mapped[List["Theme"]] = relationship(
         secondary=IconographyTheme.__table__,
-        back_populates="iconography",
-        cascade="all, delete-orphan"
+        back_populates="iconography"
     )
     # NOTE: pas de delete-orphan sur Place: on veut qu'une Place continue d'exister même si aucune Iconography n'y fait référence
     place: Mapped[List["Place"]] = relationship(

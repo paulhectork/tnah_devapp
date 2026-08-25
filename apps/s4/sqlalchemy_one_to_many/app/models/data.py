@@ -30,7 +30,6 @@ class Author(db.Model):
     author_name: Mapped[str] = mapped_column(unique=True)
 
     iconography: Mapped["Iconography"] = relationship(
-        back_populates="author", 
-        cascade="all, delete-orphan"
+        back_populates="author"
     )
 
