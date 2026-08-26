@@ -7,7 +7,7 @@ from app.app import db
 
 
 class Iconography(db.Model):
-    __tablename__ = "Iconography"
+    __tablename__ = "iconography"
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str]
@@ -17,10 +17,10 @@ class Iconography(db.Model):
     richelieu_url: Mapped[str]
     date_lower: Mapped[Optional[int]]
     date_upper: Mapped[Optional[int]]
-    institution: Mapped[int]
+    institution: Mapped[str]
 
-    id_author: Mapped[int] = mapped_column(ForeignKey("author.id"))
-    author: Mapped["Author"] = relationship(back_populates="iconography")
+    id_author: Mapped[Optional[int]] = mapped_column(ForeignKey("author.id"))    
+    author: Mapped[Optional["Author"]] = relationship(back_populates="iconography")
 
 
 class Author(db.Model):

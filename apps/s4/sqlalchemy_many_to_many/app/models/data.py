@@ -76,9 +76,9 @@ class Iconography(db.Model):
     date_lower: Mapped[Optional[int]]
     date_upper: Mapped[Optional[int]]
     institution: Mapped[str]
-    id_author: Mapped[int] = mapped_column(ForeignKey("author.id"))
+    id_author: Mapped[Optional[int]] = mapped_column(ForeignKey("author.id"))
     
-    author: Mapped["Author"] = relationship(back_populates="iconography")
+    author: Mapped[Optional["Author"]] = relationship(back_populates="iconography")
     theme: Mapped[List["Theme"]] = relationship(
         secondary=IconographyTheme.__table__,
         back_populates="iconography"
