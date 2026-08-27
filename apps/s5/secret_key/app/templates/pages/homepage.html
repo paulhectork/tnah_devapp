@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Accueil{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Bienvenue sur le {{ app_name }} !</h1>
+
+    <p>Le {{ app_name }} est un catalogue spatialisé des productions iconographiques 
+        réalisées dans le Quartier Richelieu (2e arrondissment, Paris), ainsi que des
+        productions qui représentent ce quartier.</p>
+
+    <h2 class="subtitle mt-5 mb-2">Explorer la base</h2>
+    <div class="flex-center accentuate">
+        <ul class="columns m-2">
+            <li class="column is-one-fourth"><a href="{{ url_for('icono_index') }}" class="button is-rounded negative">
+                Ressources iconographiques
+            </a></li>
+            <li class="column"><a href="{{ url_for('theme_index') }}" class="button is-rounded negative">
+                Thèmes
+            </a></li>
+            <li class="column"><a href="{{ url_for('place_index') }}" class="button is-rounded negative">
+                Lieux
+            </a></li>
+            <li class="column"><a href="{{ url_for('author_index') }}" class="button is-rounded negative">
+                Auteur.ice.s
+            </a></li>
+        </ul>
+    </div>
+
+    <h2 class="subtitle mt-5 mb-2">Ajouts récents</h2>
+    <p>Les <b>{{ icono_preview|length }} dernières ressources iconographiques</b> sont:</p>
+    {% with icono_corpus=icono_preview %}
+        {% include "includes/icono_list.html" %}
+    {% endwith %}
+
+{% endblock %}
