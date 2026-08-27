@@ -9,25 +9,28 @@
         réalisées dans le Quartier Richelieu (2e arrondissment, Paris), ainsi que des
         productions qui représentent ce quartier.</p>
 
-    <p>Les {{ icono_preview|length }} dernières premières iconographiques sont:</p>
-    <ul class="columns is-multiline  is-vcentered">
-        {% for icono_item in icono_preview %}
-            <li class="column is-one-fifth">
-                <a href="{{ url_for('icono_main', id_icono=icono_item.id) }}">
-                    <div class="card border">
-                        <div class="card-header">
-                            <span class="card-header-title">{{ icono_item.title }}</span>
-                        </div>
-                        {% if icono_item.author %}
-                            <div class="card-content"> 
-                                <p class="">{{ icono_item.author.author_name }}</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </a>
-            </li>
-        {% endfor %}
-    </ul>
-    <a href="{{ url_for('icono_index') }}" class="button is-rounded negative">Voir plus de ressources iconographiques</a>
+    <h2 class="subtitle mt-5 mb-2">Explorer la base</h2>
+    <div class="flex-center accentuate">
+        <ul class="columns m-2">
+            <li class="column is-one-fourth"><a href="{{ url_for('icono_index') }}" class="button is-rounded negative">
+                Ressources iconographiques
+            </a></li>
+            <li class="column"><a href="{{ url_for('theme_index') }}" class="button is-rounded negative">
+                Thèmes
+            </a></li>
+            <li class="column"><a href="{{ url_for('place_index') }}" class="button is-rounded negative">
+                Lieux
+            </a></li>
+            <li class="column"><a href="{{ url_for('author_index') }}" class="button is-rounded negative">
+                Auteur.ice.s
+            </a></li>
+        </ul>
+    </div>
+
+    <h2 class="subtitle mt-5 mb-2">Ajouts récents</h2>
+    <p>Les <b>{{ icono_preview|length }} dernières ressources iconographiques sont:</p>
+    {% with icono_corpus=icono_preview %}
+        {% include "includes/icono_list.html" %}
+    {% endwith %}
 
 {% endblock %}

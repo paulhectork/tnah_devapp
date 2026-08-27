@@ -57,7 +57,7 @@ def author_main(id_author: int):
 
 
 @app.route("/theme/")
-def icono_theme():
+def theme_index():
     """
     index des thèmes
     """
@@ -77,7 +77,7 @@ def theme_main(id_theme: int):
 
 
 @app.route("/lieu/")
-def icono_place():
+def place_index():
     """
     index des lieux
     """
