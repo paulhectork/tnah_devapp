@@ -6,32 +6,9 @@
     <h1 class="title">Auteur.ice: {{ author_item.author_name }}</h1>
     <h2 class="subtitle">{{ author_item.iconography|length }} ressources iconographiques liées</h1>
     <div class="content">
-        <ul class="columns is-multiline mt-1">
-            {% for icono_item in author_item.iconography %}
-                <li class="column is-one-third">
-                    <div class="card border">
-                        <a href="{{ url_for('icono_main', id_icono=icono_item.id) }}">
-                            <span class="card-header">   
-                                <i class="card-header-title">{{ icono_item.title }}</i>
-                            </span>
-                            <div class="card-content">
-                                {% if icono_item.author %}
-                                    <p class="">{{ icono_item.author.author_name }}</p>
-                                {% endif %}
-                                <p>
-                                    {% if icono_item.date_lower %}
-                                        ({{ icono_item.date_lower }}
-                                    {% endif %}-{% if icono_item.date_upper %}
-                                        {{ icono_item.date_upper }})
-                                    {% endif %}
-                                    {{ icono_item.institution }}
-                                </p>
-                            </div>
-                        </a>
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
+        {% with icono_corpus=author_item.iconography %}
+            {% include "includes/icono_list.html" %}
+        {% endwith %}
     </div>
 
 {% endblock %}
