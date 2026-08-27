@@ -1,5 +1,5 @@
+email_validator
 flask
-werkzeug
-SQLAlchemy
 Flask-SQLAlchemy
-ipykernel
+Flask-WTF
+SQLAlchemy

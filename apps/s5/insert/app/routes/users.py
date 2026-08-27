@@ -1,0 +1,39 @@
+from flask import render_template, request, flash, redirect
+
+from app.app import app
+from app.models.forms import UserCreateForm
+from app.models.users import User
+from app.utils.constants import APP_NAME
+
+
+@app.route("/user/nouveau/", methods=["GET", "POST"])
+def create_user():
+    form = UserCreateForm()
+
+    # form.validate_on_submit est True si:
+    # - la requête est POST (on a soumis un formulaire)
+    # - le formulaire est valide (wtforms a bien validé toutes les données fournies)
+    if form.validate_on_submit():
+        # on récupère les données et on les passe à create_user
+        # `.data` permet de sélectionner la valeur fournie par l'utilisateur.ice
+        user_name = form.user_name.data
+        user_mail = form.user_mail.data
+        user_password = form.user_password.data
+        # `create_user` retourne:
+        # - un booleen qui indique si la création réussi
+        # - soit l'objet User crée, soit une liste d'erreurs
+        success, data = User.create_user(
+            user_name=user_name, 
+            user_mail=user_mail, 
+            user_password=user_password
+        )
+        # l'insert a réussi => rediriger sur la page d'accueil
+        if success:
+            flash("Compte utilisateur créé avec succès ! Vous pouvez maintenant vous connecter.", "success")
+            return redirect("/")
+        # l'insert a échoué => afficher les messages d'erreur.
+        else: 
+            data = "Les erreurs suivantes ont été repérées:" + ", ".join(data)
+            flash(data, "error")
+            return  render_template("pages/user_create.html", form=form, app_name=APP_NAME)
+    return render_template("pages/user_create.html", form=form, app_name=APP_NAME)

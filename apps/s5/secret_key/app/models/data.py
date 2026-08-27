@@ -83,7 +83,6 @@ class Iconography(db.Model):
         secondary=IconographyTheme.__table__,
         back_populates="iconography"
     )
-    # NOTE: pas de delete-orphan sur Place: on veut qu'une Place continue d'exister même si aucune Iconography n'y fait référence
     place: Mapped[List["Place"]] = relationship(
         secondary=IconographyPlace.__table__,
         back_populates="iconography"
