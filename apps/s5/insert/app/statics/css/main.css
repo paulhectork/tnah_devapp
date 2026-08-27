@@ -61,7 +61,7 @@
     /** MY OTHER RULES */
     --cs-border: solid 1px var(--cs-color-front);
     --cs-border-negative: solid 1px var(--cs-color-back);
-    --cs-box-shadow: 0.25em 0.25em 0.25em rgba(var(--cs-color-front-rgb),0.25);
+    --cs-box-shadow:  0.25em 0.25em 0.25em rgba(0,0,0,0.25);
 }
 
 * {
@@ -109,6 +109,7 @@ pre {
   background-color: var(--cs-color-plum);
   color: var(--cs-color-back);
 }
+
 
 .flash-message {
     list-style: none;
@@ -184,5 +185,17 @@ pre {
 
 /** add shadow to bulma card **/
 .card:hover {
-    box-shadow: 0.25em 0.25em 0.25em rgba(0,0,0,0.25);
+    box-shadow: var(--cs-box-shadow);
+}
+
+.navbar-user-btn {
+    border: var(--cs-border);
+    border-color: var(--bulma-link-text);
+    border-radius: var(--bulma-radius-medium);
+    padding: 0.5em;
+}
+
+.navbar-user-btn:hover { 
+  background-color: var(--cs-color-plum);
+  color: var(--cs-color-back);
 }
