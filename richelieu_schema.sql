@@ -33,7 +33,7 @@ CREATE TABLE user (
 	id INTEGER PRIMARY KEY,
 	user_name TEXT NOT NULL,
 	user_mail TEXT NOT NULL,
-	user_password TEXT NOT NULL,
+	user_password TEXT NOT NULL
 );
 CREATE TABLE iconography_place (
 	id INTEGER PRIMARY KEY, 
