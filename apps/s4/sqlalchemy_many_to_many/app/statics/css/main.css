@@ -97,6 +97,11 @@ dd {
     padding-top: .25em
 }
 
+pre {
+    background-color: var(--cs-color-plum-dark);
+    color: var(--cs-color-back);
+}
+
 
 *::selection {
   background-color: var(--cs-color-plum);

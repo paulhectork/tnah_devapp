@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Auteur.ice.s{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Index des auteur.ice.s</h1>
+
+    <p>Il y a <b>{{ author_list|length }} auteurs et autrices</b> 
+        sur ce site.</p>
+
+    <ul class="columns is-multiline mt-1">
+        {% for author_item in author_list %}
+            <li class="column is-one-third">
+                <div class="card border">
+                    <a href="{{ url_for('author_main', id_author=author_item.id) }}">
+                        <span class="card-header">   
+                            <i class="card-header-title">{{ author_item.author_name }}</i>
+                        </span>
+                        <div class="card-content">
+                            <p>{{ author_item.iconography|length }} ressources iconographiques liées</p>
+                        </div>
+                    </a>
+                </div>
+            </li>
+        {% endfor %}        
+    </ul>
+
+{% endblock %}

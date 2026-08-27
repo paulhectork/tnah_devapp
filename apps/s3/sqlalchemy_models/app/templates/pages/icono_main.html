@@ -16,24 +16,24 @@
                         Anonyme
                     {% endif %}
                 </dd>
-                <dt>Titre</dt><dd>{{ icono_item.title }}</dt>
+                <dt>Titre</dt><dd>{{ icono_item.title }}</dd>
                 <dt>Date</dt><dd>
                     {% if icono_item.date_lower %}
                         {{ icono_item.date_lower }}{% if icono_item.date_upper %}-{{ icono_item.date_upper }}{% endif %}
                     {% endif %}
-                </dt>
+                </dd>
                 <dt>URL <q>Quartier Richelieu</q></dt><dd>
                     <a href="{{ icono_item.richelieu_url }}">{{ icono_item.richelieu_url }}</a>
-                </dt>
+                </dd>
                 {% if icono_item.source_url %}
                     <dt>URL d'origine</dt><dd>
                         <a href="{{ icono_item.source_url }}">{{ icono_item.source_url }}</a>
-                    </dt>
+                    </dd>
                 {% endif %}
                 <dt>Manifeste IIIF</dt><dd>
                     <a href="{{ icono_item.iiif_manifest_url }}">{{ icono_item.iiif_manifest_url }}</a>
-                </dt>
-                <dt>Institution</dt><dd>{{ icono_item.institution }}</dt>
+                </dd>
+                <dt>Institution</dt><dd>{{ icono_item.institution }}</dd>
             </dl>
         </div>
         <div class="block-wrapper column is-half accentuate flex-center">
