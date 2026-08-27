@@ -29,6 +29,11 @@ CREATE TABLE iconography (
 	id_author INTEGER,
 	FOREIGN KEY (id_author) REFERENCES author(id)
 );
+CREATE TABLE user (
+	id INTEGER PRIMARY KEY,
+	user_name TEXT NOT NULL,
+	user_mail TEXT NOT NULL
+);
 CREATE TABLE iconography_place (
 	id INTEGER PRIMARY KEY, 
 	id_iconography INTEGER NOT NULL, 
@@ -42,4 +47,11 @@ CREATE TABLE iconography_theme (
 	id_theme INTEGER NOT NULL,
 	FOREIGN KEY (id_iconography) REFERENCES iconography(id),
 	FOREIGN KEY (id_theme) REFERENCES theme(id)
+);
+CREATE TABLE iconography_user (
+	id INTEGER PRIMARY KEY, 
+	id_iconography INTEGER NOT NULL, 
+	id_user INTEGER NOT NULL,
+	FOREIGN KEY (id_iconography) REFERENCES iconography(id),
+	FOREIGN KEY (id_user) REFERENCES user(id)
 );
