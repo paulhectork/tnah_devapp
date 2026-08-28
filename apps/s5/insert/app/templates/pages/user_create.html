@@ -5,7 +5,7 @@
 {% block main_content %}
     <h1 class="title">Créer un compte utilisateur</h1>
 
-    <form method="POST" action="{{ url_for('create_user') }}">
+    <form method="POST" action="{{ url_for('user_create') }}">
         {{ form.csrf_token }} 
         <dl>
             {% for field in form %}

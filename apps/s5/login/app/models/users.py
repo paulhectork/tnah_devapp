@@ -1,10 +1,11 @@
 from typing import Union, Tuple, List, Optional
 
+from flask_login import UserMixin
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from app.app import db
+from app.app import db, login_manager
 
 
 class IconographyUser(db.Model):
@@ -15,7 +16,7 @@ class IconographyUser(db.Model):
     id_user: Mapped[int] = mapped_column(ForeignKey("user.id"))
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = "user"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -75,3 +76,23 @@ class User(db.Model):
             # on retourne le message d'erreur dans une liste
             print(e)
             return False, [str(e)]
+
+    @staticmethod
+    def login(user_mail: str, user_password: str) -> Optional["User"]:
+        # retourne soit un `User`, soit None 
+        user = db.session.execute(
+            db.select(User).filter(User.user_mail == user_mail)
+        ).scalars().first()
+        # on vérifie que le `User` avec ce mail a bien le bon mot de passe
+        if user and check_password_hash(user.user_password, user_password):
+            return user
+        # sinon, on retourne None
+        return None
+
+
+@login_manager.user_loader
+def load_user(id_user: str):
+    id_user = int(id_user)
+    return db.session.get(User, id_user)
+
+
