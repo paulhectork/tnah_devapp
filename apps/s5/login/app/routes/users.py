@@ -51,7 +51,7 @@ def user_login():
     if form.validate_on_submit():
         user_mail = form.user_mail.data
         user_password = form.user_password.data
-        user = User.login(
+        user = User.get_user_by_credentials(
             user_mail=user_mail,
             user_password=user_password
         )

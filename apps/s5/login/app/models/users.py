@@ -1,6 +1,6 @@
 from typing import Union, Tuple, List, Optional
 
-from flask_login import UserMixin
+from flask_login import UserMixin, login_user, logout_user
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -78,7 +78,12 @@ class User(db.Model, UserMixin):
             return False, [str(e)]
 
     @staticmethod
-    def login(user_mail: str, user_password: str) -> Optional["User"]:
+    def get_user_by_credentials(user_mail: str, user_password: str) -> Optional["User"]:
+        """
+        identifier un User par son mail et son mdp. 
+
+        :returns: l'User si le mail et mdp sont valides, None sinon 
+        """
         # retourne soit un `User`, soit None 
         user = db.session.execute(
             db.select(User).filter(User.user_mail == user_mail)
