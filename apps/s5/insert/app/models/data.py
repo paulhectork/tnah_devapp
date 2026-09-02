@@ -4,7 +4,7 @@ from sqlalchemy import ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.app import db
-from app.models.users import User, IconographyUser
+from app.models.users import User
 
 
 class IconographyPlace(db.Model):
@@ -86,10 +86,6 @@ class Iconography(db.Model):
     place: Mapped[List["Place"]] = relationship(
         secondary=IconographyPlace.__table__,
         back_populates="iconography"
-    )
-    user: Mapped[List["User"]] = relationship(
-        back_populates = "iconography",
-        secondary=IconographyUser.__table__
     )
 
 

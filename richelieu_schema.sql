@@ -49,10 +49,3 @@ CREATE TABLE iconography_theme (
 	FOREIGN KEY (id_iconography) REFERENCES iconography(id),
 	FOREIGN KEY (id_theme) REFERENCES theme(id)
 );
-CREATE TABLE iconography_user (
-	id INTEGER PRIMARY KEY, 
-	id_iconography INTEGER NOT NULL, 
-	id_user INTEGER NOT NULL,
-	FOREIGN KEY (id_iconography) REFERENCES iconography(id),
-	FOREIGN KEY (id_user) REFERENCES user(id)
-);

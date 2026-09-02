@@ -8,14 +8,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app.app import db, login_manager
 
 
-class IconographyUser(db.Model):
-    __tablename__ = "iconography_user"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    id_iconography: Mapped[int] = mapped_column(ForeignKey("iconography.id"))
-    id_user: Mapped[int] = mapped_column(ForeignKey("user.id"))
-
-
 class User(db.Model, UserMixin):
     __tablename__ = "user"
 
@@ -24,11 +16,6 @@ class User(db.Model, UserMixin):
     user_mail: Mapped[str]
     user_password: Mapped[str]
     
-    iconography: Mapped[List["Iconography"]] = relationship(
-        back_populates="user",
-        secondary=IconographyUser.__table__
-    )  
-
     @staticmethod
     def create_user(user_mail: str, user_name: str, user_password: str) -> Tuple[bool, Union["User", List[str]]]:
         """
