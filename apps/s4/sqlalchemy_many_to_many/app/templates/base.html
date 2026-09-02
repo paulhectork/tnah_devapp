@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+            {{ app_name }}
+            {% block title_extra %}{% endblock %}
+        </title>
+        {% include "includes/metadata.html" %}
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Tangerine">
+    <style>
+        {% block extra_css %}{% endblock %}
+    </style>
+    </head>
+    <body>
+        {% include "includes/header.html" %}
+        <main class="m-5">
+            {% block main_content %}{% endblock %}
+        </main>
+        {% include "includes/footer.html" %}
+    </body>
+</html>
