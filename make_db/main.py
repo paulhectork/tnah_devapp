@@ -19,6 +19,8 @@ PATH_ROOT = PATH_DIR.parent.resolve()  # tnah_devapp/ folder
 PATH_ENV = PATH_DIR / ".env"
 PATH_OUT = PATH_ROOT
 PATH_DB = PATH_OUT / "richelieu.db"
+PATH_DATA = PATH_ROOT / "data"
+PATH_ICONOGRAPHY_SAMPLE = PATH_DATA / "iconography_sample.csv"
 
 PATH_DB_SCHEMA = PATH_OUT / "richelieu_schema.sql"
 
@@ -463,6 +465,18 @@ class MigrationPipeline:
             setattr(self, df_name, df)
         return self
 
+    # remove `n_rows` rows from the output `Iconography` and save them to a CSV file. 
+    # this sample data can be added by hand in the app during classes  
+    def _sample_manual(self):
+        n_rows = 20
+        df_iconography = self.df_iconography.copy()
+        df_sample = self.df_iconography[:n_rows]
+        df_iconography = self.df_iconography[n_rows:]
+        df_sample.to_csv(PATH_ICONOGRAPHY_SAMPLE, index=False)
+        print(f"wrote {n_rows} sample iconography rows to '{PATH_ICONOGRAPHY_SAMPLE}'")
+        self.df_iconography = df_iconography
+        return self
+
     def _to_sql(self):
         # NOTE: order is important
         tables = [
@@ -516,6 +530,7 @@ class MigrationPipeline:
             ._add_urls()
             ._drop_and_rename_fields()
             ._cast_types()
+            ._sample_manual()
             ._to_sql()
         )
         
@@ -527,6 +542,7 @@ if __name__ == "__main__":
         exit(1)
 
     PATH_OUT.mkdir(exist_ok=True)
+    PATH_DATA.mkdir(exist_ok=True)
     if PATH_DB.is_file():
         PATH_DB.unlink()
     if not PATH_DB_SCHEMA.is_file():
