@@ -470,8 +470,8 @@ class MigrationPipeline:
     def _sample_manual(self):
         n_rows = 20
         df_iconography = self.df_iconography.copy()
-        df_sample = self.df_iconography[:n_rows]
-        df_iconography = self.df_iconography[n_rows:]
+        df_sample = df_iconography[:n_rows].drop(columns=["id"])
+        df_iconography = df_iconography[n_rows:]
         df_sample.to_csv(PATH_ICONOGRAPHY_SAMPLE, index=False)
         print(f"wrote {n_rows} sample iconography rows to '{PATH_ICONOGRAPHY_SAMPLE}'")
         self.df_iconography = df_iconography
