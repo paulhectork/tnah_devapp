@@ -22,7 +22,7 @@ CREATE TABLE iconography (
 	iiif_manifest_url TEXT NOT NULL, 
 	iiif_image_url TEXT NOT NULL, 
 	source_url TEXT, 
-	richelieu_url TEXT NOT NULL UNIQUE, 
+	richelieu_url TEXT NOT NULL, 
 	date_lower INTEGER, 
 	date_upper INTEGER,
 	institution TEXT NOT NULL,
