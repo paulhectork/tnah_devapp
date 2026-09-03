@@ -1,9 +1,10 @@
-from flask import render_template
+from flask import render_template, url_for, redirect, flash
 from sqlalchemy import text
 
 from app.app import app, db
 from app.utils.constants import APP_NAME
 from app.models.data import Iconography, Author, Theme, Place
+from app.models.forms import IconographyCreateForm
 
 @app.route("/")
 def index():
@@ -34,6 +35,49 @@ def icono_main(id_icono: int):
     """
     icono_item = db.get_or_404(Iconography, id_icono)
     return render_template("pages/icono_main.html", app_name=APP_NAME, icono_item=icono_item)
+
+
+@app.route("/iconographie/nouveau", methods=["GET", "POST"])
+def icono_create():
+    """
+    vue pour créer une nouvelle ressource iconographique
+    """
+    form = IconographyCreateForm()
+
+    if form.validate_on_submit():
+        title = form.title.data
+        iiif_manifest_url = form.iiif_manifest_url.data
+        iiif_image_url = form.iiif_image_url.data
+        source_url = form.source_url.data
+        richelieu_url = form.richelieu_url.data
+        date_lower = form.date_lower.data
+        date_upper = form.date_upper.data
+        institution = form.institution.data
+        id_author = form.id_author.data
+        id_place = form.id_place.data
+        id_theme = form.id_theme.data
+
+        success, data = Iconography.create(
+            title=title,
+            iiif_manifest_url=iiif_manifest_url,
+            iiif_image_url=iiif_image_url,
+            source_url=source_url,
+            richelieu_url=richelieu_url,
+            date_lower=date_lower,
+            date_upper=date_upper,
+            institution=institution,
+            id_author=id_author,
+            id_place=id_place,
+            id_theme=id_theme
+        )
+        if success: 
+            flash(f"Nouvelle ressource iconographique créée avec succès: {data.id}", "success")
+            return redirect(url_for("icono_main", id_icono=data.id))
+        else:
+            flash(f"Erreur à la création d'une ressource iconographique: {data}", "error")
+            return render_template("pages/icono_create.html", app_name=APP_NAME, form=form)
+    
+    return render_template("pages/icono_create.html", app_name=APP_NAME, form=form)
 
 
 @app.route("/auteur/")

@@ -23,6 +23,8 @@
 
 :root {
     /** CUSTOM COLOR DEFINITIONS */
+
+    --cs-green: #66cdaa;
     --cs-color-plum: #710551;
     --cs-color-plum-light: #c93e9f;
     --cs-color-plum-dark: #680059;
@@ -59,7 +61,7 @@
     /** MY OTHER RULES */
     --cs-border: solid 1px var(--cs-color-front);
     --cs-border-negative: solid 1px var(--cs-color-back);
-    --cs-box-shadow: 0.25em 0.25em 0.25em rgba(var(--cs-color-front-rgb),0.25);
+    --cs-box-shadow:  0.25em 0.25em 0.25em rgba(0,0,0,0.25);
 }
 
 * {
@@ -108,6 +110,35 @@ pre {
   color: var(--cs-color-back);
 }
 
+
+.flash-message {
+    list-style: none;
+    padding: 0.5em 1em;
+    margin: 0.25rem 0 0 0;
+    border-radius: var(--bulma-radius-small)
+}
+
+.success {
+    background-color: var(--bulma-scheme-main);
+    color: var(--cs-green);    
+}
+
+.errors {
+    background-color: var(--bulma-scheme-main);
+    color: var(--cs-color-plum);
+}
+
+.flash-message.success {
+    background-color: var(--cs-green);  
+    color: var(--bulma-text);  
+
+}
+
+.flash-message.errors {
+    background-color: var(--cs-color-plum);  
+    color: var(--cs-color-back);
+}
+
 .negative {
   background-color: var(--cs-color-front);
   color: var(--cs-color-back);
@@ -154,5 +185,17 @@ pre {
 
 /** add shadow to bulma card **/
 .card:hover {
-    box-shadow: 0.25em 0.25em 0.25em rgba(0,0,0,0.25);
+    box-shadow: var(--cs-box-shadow);
+}
+
+.navbar-user-btn {
+    border: var(--cs-border);
+    border-color: var(--bulma-link-text);
+    border-radius: var(--bulma-radius-medium);
+    padding: 0.5em;
+}
+
+.navbar-user-btn:hover { 
+  background-color: var(--cs-color-plum);
+  color: var(--cs-color-back);
 }

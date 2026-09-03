@@ -1,4 +1,7 @@
 from pathlib import Path
+from warnings import warn
+
+APP_NAME = "Catalogue Richelieu"
 
 # chemin absolu vers dossier utils/
 DIR_UTILS = Path(__file__).parent.resolve()
@@ -18,4 +21,9 @@ DIR_STATICS = DIR_APP / "statics"
 # chemin vers la base de données sqlite (à la racine du dossier `tnah_devapp/`)
 PATH_DB = DIR_ROOT.parent.parent.parent.resolve() / "richelieu.db"
 
-APP_NAME = "Catalogue Richelieu"
+# la clé top secrète
+secret_key_default = "Une clé secrète"
+SECRET_KEY = "Une clé secrète"
+
+if SECRET_KEY == secret_key_default:
+    warn(f"Changez votre clé secrète avant de passer en production ! Clé secrète actuelle: {SECRET_KEY}")

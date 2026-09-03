@@ -17,6 +17,25 @@
     <body>
         {% include "includes/header.html" %}
         <main class="m-5">
+
+            {% with messages = get_flashed_messages(with_categories=True) %}
+                {% if messages %}
+                    <div class="flex-center">
+                        <ul class=flashes>
+                            {% for category, message in messages %}
+                                <li class=
+                                    {% if category=="error" %}
+                                        "flash-message errors"
+                                    {% else %}
+                                        "flash-message success"
+                                    {% endif %}
+                                >{{ message }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            {% endwith %}
+
             {% block main_content %}{% endblock %}
         </main>
         {% include "includes/footer.html" %}
