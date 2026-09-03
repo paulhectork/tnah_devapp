@@ -20,7 +20,8 @@ PATH_ENV = PATH_DIR / ".env"
 PATH_OUT = PATH_ROOT
 PATH_DB = PATH_OUT / "richelieu.db"
 PATH_DATA = PATH_ROOT / "data"
-PATH_ICONOGRAPHY_SAMPLE = PATH_DATA / "iconography_sample.csv"
+# extension is defined in `_sample_manual`: we export the sample to CSV and to markdown
+PATH_ICONOGRAPHY_SAMPLE = PATH_DATA / "iconography_sample"
 
 PATH_DB_SCHEMA = PATH_OUT / "richelieu_schema.sql"
 
@@ -465,15 +466,16 @@ class MigrationPipeline:
             setattr(self, df_name, df)
         return self
 
-    # remove `n_rows` rows from the output `Iconography` and save them to a CSV file. 
+    # remove `n_rows` rows from the output `Iconography` and save them to a CSV and to a markdown file. 
     # this sample data can be added by hand in the app during classes  
     def _sample_manual(self):
         n_rows = 20
         df_iconography = self.df_iconography.copy()
         df_sample = df_iconography[:n_rows].drop(columns=["id"])
         df_iconography = df_iconography[n_rows:]
-        df_sample.to_csv(PATH_ICONOGRAPHY_SAMPLE, index=False)
-        print(f"wrote {n_rows} sample iconography rows to '{PATH_ICONOGRAPHY_SAMPLE}'")
+        df_sample.to_csv(f"{PATH_ICONOGRAPHY_SAMPLE}.csv", index=False)
+        df_sample.to_markdown(f"{PATH_ICONOGRAPHY_SAMPLE}.md", index=False)
+        print(f"wrote {n_rows} sample iconography rows to '{PATH_ICONOGRAPHY_SAMPLE}[.md,.csv]'")
         self.df_iconography = df_iconography
         return self
 
