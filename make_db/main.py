@@ -13,6 +13,7 @@ from sqlalchemy import create_engine, text, URL
 from sqlalchemy.engine import Engine
 from sqlalchemy import types as sa_types
 from psycopg2._range import NumericRange
+from werkzeug.security import generate_password_hash
 
 PATH_DIR = Path(__file__).parent.resolve()
 PATH_ROOT = PATH_DIR.parent.resolve()  # tnah_devapp/ folder
@@ -290,6 +291,15 @@ class MigrationPipeline:
 
         return self
 
+    # create `df_user` representing the User table containing a single row
+    def _make_user(self):
+        self.df_user = pd.DataFrame(
+            [[ 1, "admin", "admin@mail.com", generate_password_hash("admin") ]], 
+            columns=["id", "user_name", "user_mail", "user_password"]
+        )
+        print(self.df_user)
+        return self
+
     # for each ressource where it's possible, add an URL to the Quartier Richelieu website page. 
     def _add_urls(self):
         mapper = {
@@ -482,6 +492,7 @@ class MigrationPipeline:
     def _to_sql(self):
         # NOTE: order is important
         tables = [
+            "user",
             "author",
             "theme",
             "place",
@@ -526,6 +537,7 @@ class MigrationPipeline:
             self
             ._populate()
             ._joins()
+            ._make_user()
             ._filter_rows()
             ._reset_ids()
             ._get_iiif_images()
