@@ -464,6 +464,15 @@ class MigrationPipeline:
                 df["date"] = df["date"].apply(numericrange_to_inttuple)
                 df["date_lower"] = df["date"].apply(lambda x: x[0])
                 df["date_upper"] = df["date"].apply(lambda x: x[1])
+                
+                # numeric range bounds are [inclusive, exclusive) 
+                # => decrease upper bound by 1 to make it [inclusive, inclusive].
+                mask = df.date_lower.notna() & df.date_upper.notna()
+                df.loc[mask, ["date_upper"]] -= 1
+
+                # if upper and lower bounds are the same, drop the upper date.
+                df.loc[mask & df.date_lower.eq(df.date_upper), ["date_upper"]] = np.nan
+        
                 df = df.drop(columns="date")
             setattr(self, df_name, df)
 
@@ -479,12 +488,48 @@ class MigrationPipeline:
     # remove `n_rows` rows from the output `Iconography` and save them to a CSV and to a markdown file. 
     # this sample data can be added by hand in the app during classes  
     def _sample_manual(self):
+        def merge_relationship(df: pd.DataFrame, df_foreign_name: str, df_foreign_field: str):
+            df_cols = df.columns
+
+            df_relationship = self.__dict__[f"df_r_iconography_{df_foreign_name}"]
+            fk_name = f"id_{df_foreign_name}"  # foreign-key to df_foreign
+            df_foreign = self.__dict__[f"df_{df_foreign_name}"]
+            df_mapper = df_relationship.loc[
+                df_relationship.id_iconography.isin(df.id),
+            ]
+            df_mapper = df_mapper[["id_iconography", fk_name]]
+            df_mapper = df_mapper.merge(
+                df_foreign.copy(), 
+                left_on=fk_name, 
+                right_on="id", 
+                how="inner"
+            )[["id_iconography", fk_name, df_foreign_field]]
+            df = df.merge(
+                df_mapper, 
+                left_on="id", 
+                right_on="id_iconography", 
+                how="inner"
+            )
+            df = df.drop_duplicates(subset="id", keep="first")[ df_cols.to_list() + [fk_name, df_foreign_field] ]
+            return df
+
         n_rows = 20
         df_iconography = self.df_iconography.copy()
-        df_sample = df_iconography[:n_rows].drop(columns=["id"])
+        df_sample = df_iconography[:n_rows]
         df_iconography = df_iconography[n_rows:]
+        df_sample = merge_relationship(df_sample, "theme", "theme_name")
+        df_sample = merge_relationship(df_sample, "place", "address")
+        df_sample = df_sample.merge(
+            self.df_author[["id", "author_name"]],
+            how="left", 
+            left_on="id_author", 
+            right_on=["id"]
+        )
+        df_sample = df_sample[["title", "iiif_manifest_url", "iiif_image_url", "source_url", "richelieu_url", "institution", "date_lower", "date_upper", "id_theme", "theme_name", "id_place", "address", "id_author", "author_name"]]
+        
         df_sample.to_csv(f"{PATH_ICONOGRAPHY_SAMPLE}.csv", index=False)
         df_sample.to_markdown(f"{PATH_ICONOGRAPHY_SAMPLE}.md", index=False)
+        
         print(f"wrote {n_rows} sample iconography rows to '{PATH_ICONOGRAPHY_SAMPLE}[.md,.csv]'")
         self.df_iconography = df_iconography
         return self
