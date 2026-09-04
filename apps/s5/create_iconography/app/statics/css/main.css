@@ -110,6 +110,9 @@ pre {
   color: var(--cs-color-back);
 }
 
+form input:not(input[type="submit"]) {
+    min-width: 40vw;
+}
 
 .flash-message {
     list-style: none;
