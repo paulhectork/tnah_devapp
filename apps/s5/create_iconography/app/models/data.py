@@ -118,17 +118,21 @@ class Iconography(db.Model):
             richelieu_url=richelieu_url,
             date_lower=date_lower,
             date_upper=date_upper,
-            institution=institution,
-            id_author=id_author,
+            institution=institution
         )
 
-        # 2. on ajoute les jointures 
+        # 2. on ajoute les relations 
+        if id_author:
+            author = db.session.get(Author, id_author)
+            new_icono.author = author
         if id_place:
+            # pour new_icono.place et new_icono.theme, on ajoute les relations dans une liste:
+            # il s'agit d'une liste de relations
             place = db.session.get(Place, id_place)
-            new_icono.place = [place]
+            new_icono.place.append(place)
         if id_theme:
             theme = db.session.get(Theme, id_theme)
-            new_icono.theme = [theme]
+            new_icono.theme.append(theme)
 
         # 2. on fait le commit
         # la base de donnée est un système "externe" avec son propre système de validation.
@@ -136,8 +140,6 @@ class Iconography(db.Model):
         try:
             db.session.add(new_icono)
             db.session.commit()
-
-            # 3. on ajoute les jointures à 
 
             return True, new_icono
         except Exception as e:

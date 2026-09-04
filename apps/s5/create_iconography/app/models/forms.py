@@ -8,7 +8,7 @@ from app.models.data import Author, Theme, Place
 from app.app import app, db
 
 
-def get_iconography_joins() -> Tuple[List, List, List]:
+def get_iconography_relationships() -> Tuple[List, List, List]:
     """
     retourne, pour chaque table avec laquelle Iconography 
     a une relation, une liste de (id, nom_de_objet) (chaque 
@@ -46,7 +46,7 @@ def get_iconography_joins() -> Tuple[List, List, List]:
 
 class IconographyCreateForm(FlaskForm):
     # on récupère les choix pour les tables de relations
-    author_choices, theme_choices, place_choices = get_iconography_joins()
+    author_choices, theme_choices, place_choices = get_iconography_relationships()
 
     # on définit un champ par colonne de la table Iconography
     title = StringField("Titre de la ressource", validators=[DataRequired(), Length(max=50)])
