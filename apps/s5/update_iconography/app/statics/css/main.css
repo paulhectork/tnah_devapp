@@ -1,0 +1,204 @@
+@font-face {
+    font-family: 'urlaub-grotesk';
+    src: url('../fonts/Urlaub-Grotesk-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'eb-garamond';
+    src: url("../fonts/EBGaramond-VariableFont_wght.ttf") format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    size-adjust: 120%;
+}
+
+@font-face {
+    font-family: 'eb-garamond';
+    src: url('../fonts/EBGaramond-Italic-VariableFont_wght.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+    size-adjust: 120%;
+}
+
+:root {
+    /** CUSTOM COLOR DEFINITIONS */
+
+    --cs-green: #66cdaa;
+    --cs-color-plum: #710551;
+    --cs-color-plum-light: #c93e9f;
+    --cs-color-plum-dark: #680059;
+    --cs-color-back: #ffffff;
+    --cs-color-front: #000;
+    --cs-color-front-rgb: rgb(0,0,0);
+
+
+    /** OVERRIDING BULMA DEFAULTS */
+    /* body/scheme background */
+    --bulma-scheme-main: var(--cs-color-back);
+    /* body text color */
+    --bulma-text: var(--cs-color-front);
+
+    /* link color */
+    /* visited link color is set in `a:visited` css rule directly */
+    --bulma-link-text: var(--cs-color-plum);
+
+    /* link hover color */
+    /* normally = link color's lightness + a global "-5%" delta */
+    --bulma-link-text-hover: var(--cs-color-plum-light);
+
+    /* active link color */
+    /* normally link + a -10% lightness delta */
+    --bulma-link-text-active: var(--cs-color-plum-dark);
+
+    /* affects .title AND any other element that defaults off --bulma-text-strong,
+       e.g. <strong>, table headers, etc. */
+    --bulma-text-strong: var(--bulma-text);
+
+    /* OR, to touch titles only, without affecting <strong>/table headers/etc: */
+    --bulma-title-color: var(--bulma-text);
+
+    /** MY OTHER RULES */
+    --cs-border: solid 1px var(--cs-color-front);
+    --cs-border-negative: solid 1px var(--cs-color-back);
+    --cs-box-shadow:  0.25em 0.25em 0.25em rgba(0,0,0,0.25);
+}
+
+* {
+    transition: box-shadow .33s;
+}
+
+body {
+    font-family: "urlaub-grotesk";
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: eb-garamond;
+}
+
+b, strong {
+    font-family: eb-garamond;
+}
+
+dl {
+    display: grid;
+    grid-template-columns: max-content auto;
+    column-gap: 1em;
+    margin: 1em 0;
+    align-items: center;
+}
+
+dt {
+    grid-column: 1;
+    font-family: eb-garamond;
+    font-weight: bold;
+}
+
+dd {
+    grid-column: 2;
+    padding-top: .25em
+}
+
+pre {
+    background-color: var(--cs-color-plum-dark);
+    color: var(--cs-color-back);
+}
+
+
+*::selection {
+  background-color: var(--cs-color-plum);
+  color: var(--cs-color-back);
+}
+
+form input:not(input[type="submit"]) {
+    min-width: 40vw;
+}
+
+.flash-message {
+    list-style: none;
+    padding: 0.5em 1em;
+    margin: 0.25rem 0 0 0;
+    border-radius: var(--bulma-radius-small)
+}
+
+.success {
+    background-color: var(--bulma-scheme-main);
+    color: var(--cs-green);    
+}
+
+.errors {
+    background-color: var(--bulma-scheme-main);
+    color: var(--cs-color-plum);
+}
+
+.flash-message.success {
+    background-color: var(--cs-green);  
+    color: var(--bulma-text);  
+
+}
+
+.flash-message.errors {
+    background-color: var(--cs-color-plum);  
+    color: var(--cs-color-back);
+}
+
+.negative {
+  background-color: var(--cs-color-front);
+  color: var(--cs-color-back);
+}
+
+.accentuate {
+  background-color: var(--cs-color-plum);
+  color: var(--cs-color-back);
+}
+
+.garamond {
+    font-family: eb-garamond !important;
+}
+
+.border {
+    border: var(--cs-border);
+}
+
+.border-top {
+    border-top: var(--cs-border);
+}
+
+.border-left {
+    border-left: var(--cs-border);
+}
+
+.border-right {
+    border-right: var(--cs-border);
+}
+
+.border-bottom {
+    border-bottom: var(--cs-border);
+}
+
+.object-fit-contain {
+    object-fit: contain;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/** add shadow to bulma card **/
+.card:hover {
+    box-shadow: var(--cs-box-shadow);
+}
+
+.navbar-user-btn {
+    border: var(--cs-border);
+    border-color: var(--bulma-link-text);
+    border-radius: var(--bulma-radius-medium);
+    padding: 0.5em;
+}
+
+.navbar-user-btn:hover { 
+  background-color: var(--cs-color-plum);
+  color: var(--cs-color-back);
+}

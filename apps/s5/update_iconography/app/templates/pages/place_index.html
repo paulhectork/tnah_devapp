@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Lieux{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Index des lieux</h1>
+
+    <p>Il y a <b>{{ place_list|length }} lieux</b> 
+        sur ce site.</p>
+
+    <ul class="columns is-multiline mt-1">
+        {% for place_item in place_list %}
+            <li class="column is-one-third">
+                <div class="card border">
+                    <a href="{{ url_for('place_main', id_place=place_item.id) }}">
+                        <span class="card-header">   
+                            <i class="card-header-title">{{ place_item.address }}</i>
+                        </span>
+                        <div class="card-content">
+                            <p>{{ place_item.iconography|length }} ressources iconographiques liées</p>
+                        </div>
+                    </a>
+                </div>
+            </li>
+        {% endfor %}        
+    </ul>
+
+{% endblock %}
