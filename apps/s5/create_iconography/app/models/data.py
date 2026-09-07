@@ -134,7 +134,7 @@ class Iconography(db.Model):
             theme = db.session.get(Theme, id_theme)
             new_icono.theme.append(theme)
 
-        # 2. on fait le commit
+        # 3. on fait le commit
         # la base de donnée est un système "externe" avec son propre système de validation.
         # un problème est toujours théoriquement possible, donc on met un try...execpt
         try:
