@@ -161,7 +161,12 @@ class Iconography(db.Model):
         id_place: Optional[int],
         id_theme: Optional[int],
     ) -> Tuple[bool, Union["Iconography",str]]:
-        
+        """
+        modifier un objet icono existant en base.
+        :returns: (bool, icono|str).
+            - bool indique le succès de l'update (si True, l'update a réussi)
+            - si l'update a réussi, on retourne l'objet mis à jour, sinon on retourne un message d'erreur.
+        """        
         # 1. on met à jour tous les champs
         self.title = title
         self.iiif_manifest_url = iiif_manifest_url
