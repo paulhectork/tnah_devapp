@@ -297,7 +297,6 @@ class MigrationPipeline:
             [[ 1, "admin", "admin@mail.com", generate_password_hash("admin") ]], 
             columns=["id", "user_name", "user_mail", "user_password"]
         )
-        print(self.df_user)
         return self
 
     # for each ressource where it's possible, add an URL to the Quartier Richelieu website page. 
@@ -416,7 +415,7 @@ class MigrationPipeline:
                     isna_pre = isna_count(foreign_df[fk_name])
                     foreign_df[fk_name] = foreign_df[fk_name].map(s_mapper)
                     isna_post = isna_count(foreign_df[fk_name])
-                    assert isna_pre == isna_post, f"foreign keys lost in: _reset_ids. col: {foreign_df_name}[{fk_name}], pre={isna_pre}, post={isna_post}, change={isna_pre-isna_post}"
+                    assert isna_pre == isna_post, f"foreign keys lost in _reset_ids. col: {foreign_df_name}[{fk_name}], pre={isna_pre}, post={isna_post}, change={isna_pre-isna_post}"
                     setattr(self, foreign_df_name, foreign_df)
         return self
 
@@ -513,10 +512,19 @@ class MigrationPipeline:
             df = df.drop_duplicates(subset="id", keep="first")[ df_cols.to_list() + [fk_name, df_foreign_field] ]
             return df
 
+        # ensure that sampling hasn't messed up the dataframe's id column: it still contains integers in a coninuous order (1-increments)
+        def assert_no_id_shift(df: pd.DataFrame):
+            assert df.loc[df.id.diff() > 1].shape[0] == 0, f"_sample_manual has messed up the definition of ids in _reset_ids: discontinuoua ids\n{df}"
+
         n_rows = 20
         df_iconography = self.df_iconography.copy()
-        df_sample = df_iconography[:n_rows]
-        df_iconography = df_iconography[n_rows:]
+
+        df_sample = df_iconography.tail(n_rows)
+        df_iconography = df_iconography.head(df_iconography.shape[0]-n_rows)
+        assert df_iconography.head(1).id.squeeze() == 1, f"_sample_manual has messed up the definition of ids in _reset_ids: first id is not 1\n{df}"
+        assert_no_id_shift(df_iconography)   
+        assert_no_id_shift(df_sample)     
+
         df_sample = merge_relationship(df_sample, "theme", "theme_name")
         df_sample = merge_relationship(df_sample, "place", "address")
         df_sample = df_sample.merge(
