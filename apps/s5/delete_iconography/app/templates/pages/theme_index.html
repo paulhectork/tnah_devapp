@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Thèmes{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Index des thèmes</h1>
+
+    <p>Il y a <b>{{ theme_list|length }} thèmes</b> 
+        sur ce site.</p>
+
+    <ul class="columns is-multiline mt-1">
+        {% for theme_item in theme_list %}
+            <li class="column is-one-third">
+                <div class="card border">
+                    <a href="{{ url_for('theme_main', id_theme=theme_item.id) }}">
+                        <span class="card-header">   
+                            <i class="card-header-title">{{ theme_item.theme_name }}</i>
+                        </span>
+                        <div class="card-content">
+                            <p>{{ theme_item.iconography|length }} ressources iconographiques liées</p>
+                        </div>
+                    </a>
+                </div>
+            </li>
+        {% endfor %}        
+    </ul>
+
+{% endblock %}
