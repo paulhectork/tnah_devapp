@@ -58,6 +58,11 @@
                 </dd>
                 <dt>Institution</dt><dd>{{ icono_item.institution }}</dd>
             </dl>
+
+            <div class="columns mt-5">
+                <a class="button column is-2 negative is-rounded m-3" href="{{ url_for('icono_update', id_icono=icono_item.id) }}">Modifier</a>
+                <a class="button column is-2 negative is-rounded m-3" href="{{ url_for('icono_delete', id_icono=icono_item.id) }}">Supprimer</a>
+            </div>
         </div>
         <div class="block-wrapper column is-half accentuate flex-center">
             <img

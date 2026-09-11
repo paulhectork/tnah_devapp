@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Supprimer ressource iconographique{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Supprimer une ressource iconographique</h1>
+
+    <p>Êtes vous sûr.e de vouloir supprimer "{{ icono_item.title }}" ? Cette opération est irréversible.</p>
+    <form method="post" action="{{ url_for('icono_delete', id_icono=icono_item.id) }}">
+        <input class="button is-rounded accentuate m-3" type="submit" value="Supprimer"/>  
+    </div>
+    <a class="button is-rounded negative m-3" href="{{ url_for('icono_main', id_icono=icono_item.id) }}">Annuler</a>
+{% endblock %}

@@ -13,8 +13,4 @@ app = Flask(
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{PATH_DB}"
 db = SQLAlchemy(app)
 
-# from sqlalchemy import text
-# with app.app_context():
-#     print(db.session.execute(text("select * from iconography")).all())
-
 from app.routes import generic

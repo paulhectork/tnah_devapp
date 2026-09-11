@@ -14,8 +14,4 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{PATH_DB}"
 app.config["SECRET_KEY"] = SECRET_KEY
 db = SQLAlchemy(app)
 
-# from sqlalchemy import text
-# with app.app_context():
-#     print(db.session.execute(text("select * from iconography")).all())
-
 from app.routes import generic, users

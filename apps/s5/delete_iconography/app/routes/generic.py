@@ -6,6 +6,7 @@ from app.utils.constants import APP_NAME
 from app.models.data import Iconography, Author, Theme, Place
 from app.models.forms import IconographyCreateOrUpdateForm# IconographyCreateForm, IconographyUpdateForm
 
+
 @app.route("/")
 def index():
     """
@@ -220,3 +221,4 @@ def place_main(id_place: int):
     """
     place_item = db.get_or_404(Place, id_place)
     return render_template("pages/place_main.html", app_name=APP_NAME, place_item=place_item)
+
