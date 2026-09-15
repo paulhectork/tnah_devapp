@@ -6,8 +6,6 @@ from flask_login import LoginManager
 
 from app.utils.constants import DIR_TEMPLATES, DIR_STATICS, PATH_DB, APP_NAME, SECRET_KEY
 
-print(">>>", PATH_DB)
-
 def config_app(app):
     """
     configurations de l'app en fonction du contexte d'exécution. 
@@ -40,7 +38,9 @@ def config_app(app):
             "TESTING": False,
             "SQLALCHEMY_DATABASE_URI": f"sqlite:///{PATH_DB}"
         })
+
     return app
+
 
 app = Flask(
     APP_NAME,
@@ -52,5 +52,6 @@ app = config_app(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
+
 
 from app.routes import generic, users

@@ -48,14 +48,6 @@ def get_iconography_relationships() -> Tuple[List, List, List]:
 
 
 class IconographyCreateOrUpdateForm(FlaskForm):
-    # on récupère les choix pour les tables de relations
-    # author_choices, theme_choices, place_choices = get_iconography_relationships()
-
-    # on récupère les choix pour les tables de relations
-    # à noter, les ID retournés par `get_iconography_relationships` sont représentés par des `str`.
-    # il faudra les rétroconvertir à l'insert ou update
-    author_choices, theme_choices, place_choices = get_iconography_relationships()
-
     # on définit un champ par colonne de la table Iconography
     title = StringField(
         "Titre de la ressource", validators=[DataRequired()]
@@ -84,20 +76,29 @@ class IconographyCreateOrUpdateForm(FlaskForm):
     
     # on créée des champs pour les jointures
     id_author = SelectField(
-        "Auteur", choices=author_choices, validators=[Optional()]
+        "Auteur", validators=[Optional()]
     )
     id_place = SelectField(
-        "Lieu", choices=place_choices, validators=[Optional()]
+        "Lieu", validators=[Optional()]
     )
     id_theme = SelectField(
-        "Thème", choices=theme_choices, validators=[Optional()]
+        "Thème", validators=[Optional()]
     )
 
     def __init__(self, icono_item: Iconography = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
                 
+        # NOTE: je bouge cette définition dans le __init__ car sinon il y a des erreurs d'import quand on lance des tests
+        # on récupère les choix pour les tables de relations
+        # à noter, les ID retournés par `get_iconography_relationships` sont représentés par des `str`.
+        # il faudra les rétroconvertir à l'insert ou update
+        author_choices, theme_choices, place_choices = get_iconography_relationships()
+        self.id_author.choices = author_choices
+        self.id_theme.choices = theme_choices
+        self.id_place.choices = place_choices
+
         # on définit les défauts seulement si `icono_item` est défini
-        if icono_item and not self.is_submitted():
+        if icono_item:
             
             # on récupère les ID de chaque relation à `icono_item`. ces ID seront 
             # utilisés comme défaut de `id_author`, `id_theme` et `id_place`
