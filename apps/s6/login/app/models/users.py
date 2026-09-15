@@ -17,7 +17,7 @@ class User(db.Model, UserMixin):
     user_password: Mapped[str]
     
     @staticmethod
-    def create_user(user_mail: str, user_name: str, user_password: str) -> Tuple[bool, Union["User", List[str]]]:
+    def create(user_mail: str, user_name: str, user_password: str) -> Tuple[bool, Union["User", List[str]]]:
         """
         créer un nouveau user.
 

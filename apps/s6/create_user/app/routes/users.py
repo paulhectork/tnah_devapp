@@ -14,15 +14,15 @@ def user_create():
     # - la requête est POST (on a soumis un formulaire)
     # - le formulaire est valide (wtforms a bien validé toutes les données fournies)
     if form.validate_on_submit():
-        # on récupère les données et on les passe à create_user
+        # on récupère les données et on les passe à create
         # `.data` permet de sélectionner la valeur fournie par l'utilisateur.ice
         user_name = form.user_name.data
         user_mail = form.user_mail.data
         user_password = form.user_password.data
-        # `create_user` retourne:
+        # `create` retourne:
         # - un booleen qui indique si la création réussi
         # - soit l'objet User crée, soit une liste d'erreurs
-        success, data = User.create_user(
+        success, data = User.create(
             user_name=user_name, 
             user_mail=user_mail, 
             user_password=user_password
