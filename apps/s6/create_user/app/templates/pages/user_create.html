@@ -6,27 +6,8 @@
     <h1 class="title">Créer un compte utilisateur</h1>
 
     <form method="POST" action="{{ url_for('user_create') }}">
-        {{ form.csrf_token }} 
-        <dl>
-            {% for field in form %}
-                {% if field.type != 'CSRFTokenField' %}
-                    <dt>
-                        {{ field.label }}
-                        {% if field.flags.required %}*{% endif %}
-                    </dt>
-                    <dd>
-                        {{ field }}
-                        {% if field.errors %}
-                            <ul class="errors">
-                                {% for error in field.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </dd>
-                {% endif %}
-            {% endfor %}
-        </dl>
-        <input type="submit" value="Créer" class="button is-rounded negative">
+        {% with form=form, submit_label="Créer un compte" %}
+            {% include "includes/form_fields.html" %}
+        {% endwith %}
     </form>
 {% endblock %}
