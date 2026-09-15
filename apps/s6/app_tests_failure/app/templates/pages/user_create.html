@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Créer un compte utilisateur{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Créer un compte utilisateur</h1>
+
+    <form method="POST" action="{{ url_for('user_create') }}">
+        {% with form=form, submit_label="Créer" %} 
+            {% include "includes/form_fields.html" %}
+        {% endwith %}
+    </form>
+{% endblock %}

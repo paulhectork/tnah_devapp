@@ -1,5 +1,6 @@
 import os
 
+# pour éviter des problèmes de setup de l'appli, on définit FLASK_TESTING avant d'importer pytest
 os.environ["FLASK_TESTING"] = "True"
 
 import pytest

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title_extra %}
+    {% if icono_item.title %}| {{ icono_item.title }}{% endif %}
+{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">{{ icono_item.title }}</h1>
+    <div class="main-wrapper content columns">
+        <div class="block-wrapper column is-half border-right">
+            <dl class="is-center">
+                <dt>Auteur.ice</dt><dd>
+                    {% if icono_item.author %}
+                        <a href="{{ url_for('author_main', id_author=icono_item.author.id) }}">
+                            {{ icono_item.author.author_name }}
+                        </a>
+                    {% else %}
+                        Anonyme
+                    {% endif %}
+                </dd>
+                <dt>Titre</dt><dd>{{ icono_item.title }}</dd>
+                <dt>Date</dt><dd>
+                    {% if icono_item.date_lower %}
+                        {{ icono_item.date_lower }}{% if icono_item.date_upper %}-{{ icono_item.date_upper }}{% endif %}
+                    {% endif %}
+                </dd>
+                {% if icono_item.theme %}
+                    <dt>Thèmes</dt>
+                    <dd>
+                        {% for theme_item in icono_item.theme %}
+                            <a href="{{ url_for('theme_main', id_theme=theme_item.id) }}">
+                                {{ theme_item.theme_name }}
+                            </a>{{ ";" if not loop.last }}
+                        {% endfor %}
+                    </dd>
+                {% endif %}
+                {% if icono_item.place %}
+                    <dt>Lieux</dt>
+                    <dd>
+                        {% for place_item in icono_item.place %}
+                            <a href="{{ url_for('place_main', id_place=place_item.id) }}">
+                                {{ place_item.address }}
+                            </a>{{ ";" if not loop.last }}
+                        {% endfor %}
+                    </dd>
+                {% endif %}
+
+                <dt>URL <q>Quartier Richelieu</q></dt><dd>
+                    <a href="{{ icono_item.richelieu_url }}">{{ icono_item.richelieu_url }}</a>
+                </dd>
+                {% if icono_item.source_url %}
+                    <dt>URL d'origine</dt><dd>
+                        <a href="{{ icono_item.source_url }}">{{ icono_item.source_url }}</a>
+                    </dd>
+                {% endif %}
+                <dt>Manifeste IIIF</dt><dd>
+                    <a href="{{ icono_item.iiif_manifest_url }}">{{ icono_item.iiif_manifest_url }}</a>
+                </dd>
+                <dt>Institution</dt><dd>{{ icono_item.institution }}</dd>
+            </dl>
+
+            <div class="columns mt-5">
+                <a class="button column is-2 negative is-rounded m-3" href="{{ url_for('icono_update', id_icono=icono_item.id) }}">Modifier</a>
+                <a class="button column is-2 negative is-rounded m-3" href="{{ url_for('icono_delete', id_icono=icono_item.id) }}">Supprimer</a>
+            </div>
+        </div>
+        <div class="block-wrapper column is-half accentuate flex-center">
+            <img
+                class="object-fit-contain" 
+                src="{{icono_item.iiif_image_url}}" 
+                alt="Image de {{icono_item.title}}"
+            >
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_css%}
+.main-wrapper {
+    max-height: 80vh;
+}
+.block-wrapper {
+    max-height: 100%;
+}
+img {
+    height: 100%;
+}
+{% endblock %}

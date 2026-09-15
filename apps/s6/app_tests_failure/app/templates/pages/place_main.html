@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| {{ place_item.place_name }}{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Lieu: {{ place_item.address }}</h1>
+    <h2 class="subtitle">{{ place_item.iconography|length }} ressources iconographiques liées</h1>
+    <div class="content">
+        <div>
+            <dl>
+                <dt>Adresse</dt><dd>{{ place_item.address }}</dd>
+                <dt>Date</dt><dd>
+                    {% if place_item.date_lower %}
+                        {{ place_item.date_lower }}{% if place_item.date_upper %}-{{ place_item.date_upper }}{% endif %}
+                    {% endif %}
+                </dd>
+                <dt>URL <q>Quartier Richelieu</q></dt><dd>
+                    <a href="{{ place_item.richelieu_url }}">{{ place_item.richelieu_url }}</a>
+                </dd>
+                <dt>Latitude/Longitude</dt><dd><pre>{{ place_item.loc["coordinates"]|tojson }}</pre></dd>
+                <dt>Empreinte parcellaire</dt><dd><pre>{{ place_item.plot|pprint }}</pre></dd>
+            </dl>
+        </div>
+
+        <h2>Ressources iconographiques</h2>
+        {% with icono_corpus=place_item.iconography %}
+            {% include "includes/icono_list.html" %}
+        {% endwith %}
+    </div>
+
+{% endblock %}

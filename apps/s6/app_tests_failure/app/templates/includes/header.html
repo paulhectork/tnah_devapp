@@ -1,0 +1,33 @@
+<header class="border-bottom">
+    <nav class="navbar">    
+        <a class="navbar-brand title is-4 p-3 garamond" href="{{ url_for('index') }}">Catalogue Richelieu</a>
+        <div class="navbar-menu">
+            <div class="navbar-end">
+                
+                {% if current_user.is_authenticated %}
+                <div class="navbar-item">
+                    <a href="{{ url_for('user_logout') }}" class="navbar-user-btn">Déconnexion</a>
+                </div>
+                {% else %}
+                <div class="navbar-item">
+                    <a href="{{ url_for('user_login') }}" class="navbar-user-btn">Connexion</a>
+                </div>
+                {% endif %}
+
+                <div class="navbar-item">
+                    <a href="{{ url_for('user_create') }}" class="navbar-user-btn">Créer un compte</a>
+                </div>
+                <div class="navbar-item has-dropdown is-hoverable">
+                    <a class="navbar-item">Menu</a>
+                    <div class="navbar-dropdown is-right">
+                        <a class="navbar-item navbar-link" href="{{ url_for('icono_index') }}">Iconographie</a>
+                        <a class="navbar-item navbar-link" href="{{ url_for('place_index') }}">Lieux</a>
+                        <a class="navbar-item navbar-link" href="{{ url_for('theme_index') }}">Thèmes</a>
+                        <a class="navbar-item navbar-link" href="{{ url_for('author_index') }}">Auteur.ice.s</a>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </nav>
+</header>

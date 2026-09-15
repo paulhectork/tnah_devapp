@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| {{ theme_item.theme_name }}{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Thème: {{ theme_item.theme_name }}</h1>
+    <h2 class="subtitle">{{ theme_item.iconography|length }} ressources iconographiques liées</h1>
+    <div class="content">
+        {% with icono_corpus=theme_item.iconography %}
+            {% include "includes/icono_list.html" %}
+        {% endwith %}
+    </div>
+{% endblock %}
