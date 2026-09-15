@@ -54,4 +54,4 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 
-from app.routes import generic, users
+from app.routes import generic, users, api
