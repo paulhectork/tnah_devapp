@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Créer une ressource iconographique{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Créer une ressource iconographique</h1>
+
+    <form method="POST" action="{{ url_for('icono_create') }}">
+        {% with form=form, submit_label="Enregistrer" %} 
+            {% include "includes/form_fields.html" %}
+        {% endwith %}
+    </form>
+{% endblock %}

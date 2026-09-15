@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Mettre à jour une ressource iconographique{% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Mettre à jour une ressource iconographique</h1>
+
+    <form method="POST" action="{{ url_for('icono_update', id_icono=icono_item.id) }}">
+        {% with form=form, submit_label="Enregistrer" %} 
+            {% include "includes/form_fields.html" %}
+        {% endwith %}
+    </form>
+{% endblock %}

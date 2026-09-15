@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title_extra %}| Iconographie ({{ icono_corpus|length }} ressources){% endblock %}
+
+{% block main_content %}
+    <h1 class="title">Ressources iconographiques</h1>
+
+    <div class="is-flex flex-direction-column is-justify-content-flex-end">
+        <a class="button is-rounded negative" href="{{ url_for('icono_create') }}">Ajouter une nouvelle ressource iconographique</a>
+    </div>
+
+    <p>Il y a <b>{{ icono_corpus|length }} ressources iconographiques</b> 
+        sur ce site.</p>
+
+    {% with icono_corpus=icono_corpus %}
+        {% include "includes/icono_list.html" %}
+    {% endwith %}
+{% endblock %}
