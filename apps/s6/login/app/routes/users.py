@@ -38,7 +38,7 @@ def user_create():
             flash(data, "error")
             return  render_template("pages/user_create.html", form=form, app_name=APP_NAME)
     return render_template("pages/user_create.html", form=form, app_name=APP_NAME)
-
+    
 
 @app.route("/user/connexion/", methods=["GET", "POST"])
 def user_login():

@@ -17,52 +17,39 @@ class User(db.Model, UserMixin):
     user_password: Mapped[str]
     
     @staticmethod
-    def create(user_mail: str, user_name: str, user_password: str) -> Tuple[bool, Union["User", List[str]]]:
+    def create(user_mail: str, user_name: str, user_password: str) -> Tuple[bool, Union["User", str]]:
         """
         créer un nouveau user.
 
         notre fonction retourne:
-        - False, <message d'erreur> en cas d'erreur
-        - True, User en cas de succès 
+        - (True, User) en cas de succès 
+        - (False, <message d'erreur>) en cas d'erreur
         donc, le 1er item permet de savoir si l'insertion a fonctionné 
         """
-        # liste de nos erreurs
-        errors = []
-
-        # 1. on vérifie que l'utilisateur.ice a fourni toutes les données
-        if user_mail is None:
-            errors.append("Veuillez fournir un email")
-        if user_name is None:
-            errors.append("Veuillez fournir un nom d'utilisateur")
-        if user_password is None:
-            errors.append("Veuillez fournir un mot de passe")
-
         # on vérifie si il existe un autre `user` avec le même mail
         existing_user = db.session.execute(
             db.select(User).filter(User.user_mail == user_mail)
         ).scalars().all()
+        # l'user existe => on n'insère pas et on retourne un message d'erreur
         if len(existing_user):
-            errors.append(f"Un utilisateur existe déjà pour le mail: {user_mail}")
+            return False, f"Un utilisateur existe déjà pour le mail: {user_mail}"
 
-        # il y a eu des erreurs => pas d'insert
-        if len(errors):
-            return False, errors
-
-        # pas d'erreurs => on fait l'insert
+        # si l'user n'existe pas, on le crée. remarquez l'utilisation de `generate_password_hash`
         new_user = User(
             user_name=user_name,
             user_mail=user_mail,
             user_password=generate_password_hash(user_password)
         ) 
+
+        # pour finir, on insère l'user
         try:
             db.session.add(new_user)
             db.session.commit()
             return True, new_user
         except Exception as e:
             # en cas d'erreur au moment de l'insert, on retourne False et le message d'erreur de l'appli
-            # on retourne le message d'erreur dans une liste
             print(e)
-            return False, [str(e)]
+            return False, "Erreur à la création du compte utilisateur"
 
     @staticmethod
     def get_user_by_credentials(user_mail: str, user_password: str) -> Optional["User"]:
