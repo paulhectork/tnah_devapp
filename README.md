@@ -11,7 +11,7 @@ avec Flask.
 
 - tout relire
 - compléter README: utilisation
-- potentiellement rajouter des images ?
+- potentiellement rajouter des images ou des tables de résumé ?
 
 ---
 
@@ -32,7 +32,7 @@ On verra les librairies suivantes:
 - [Flask](https://flask.palletsprojects.com/en/stable/), notre framework Web
 - [Jinja](https://jinja.palletsprojects.com/en/stable/) pour créer des
     templates HTML
-- [SQLAlchemy](https://docs.sqlalchemy.org/)
+- [SQLAlchemy](https://docs.sqlalchemy.org/) pour l'interaction Python/SQL
 - [WTForms](https://wtforms.readthedocs.io/) pour créer des formulaires (et son
     plugin, Flask-WTForms)
 - [Pytest](https://docs.pytest.org/en/stable/) pour écrire des tests
@@ -41,6 +41,8 @@ On verra les librairies suivantes:
 
 ## Installation
 
+Il faut avoir Git et Python installés sur votre machine.
+
 ```bash
 # cloner le dépôt
 git clone https://github.com/paulhectork/tnah_devapp.git
@@ -48,6 +50,8 @@ git clone https://github.com/paulhectork/tnah_devapp.git
 cd tnah_devapp
 # créer un environnement virtuel
 python3 -m venv .venv
+# sourcer l'environnement virtuel
+source .venv/bin/activate
 # installer toutes les dépendances
 pip install -r requirements.txt
 ```
@@ -57,7 +61,9 @@ pip install -r requirements.txt
 ## Utilisation
 
 ```bash
+# se déplacer dans le dossier du cours
 cd tnah_devapp
+# sourcer l'environnement virtuel
 source .venv/bin/activate
 # ...
 ```
