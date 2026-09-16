@@ -6,6 +6,7 @@ os.environ["FLASK_TESTING"] = "True"
 import pytest
 
 from app.app import app as flask_app, db as flask_db
+from app.models.data import Iconography
 
 
 @pytest.fixture(autouse=True)
@@ -13,6 +14,23 @@ def set_testing_env():
     yield
     # quand les tests sont finis, on supprime la vatriable d'env
     os.environ.pop("FLASK_TESTING", None)
+
+@pytest.fixture(autouse=True)
+def set_base_icono(app, db):
+    icono_item = Iconography(
+        date_lower = 1910,
+        institution = "Biblioth\u00e8que nationale de France",
+        title = "[Lucie d'Avray. Palais Royal]",
+        iiif_image_url = "https://gallica.bnf.fr/iiif/ark:/12148/btv1b530124015/f1/full/1000/0/native.jpg",
+        iiif_manifest_url = "https://gallica.bnf.fr/iiif/ark:/12148/btv1b530124015/manifest.json",
+        richelieu_url = "https://quartier-richelieu.inha.fr/iconographie/qr1703e89942a0c4fd08052e91956f67719",
+        source_url = "https://gallica.bnf.fr/ark:/12148/btv1b530124015",
+    )
+    with app.app_context():
+        db.session.add(icono_item)
+        db.session.commit()
+        item_id = icono_item.id
+        yield
 
 
 @pytest.fixture()
