@@ -1,7 +1,8 @@
-mail_validator
+email_validator
 flask
 flask_login
 Flask-SQLAlchemy
 Flask-WTF
 pytest
 SQLAlchemy
+notebook

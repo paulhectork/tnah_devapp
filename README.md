@@ -83,7 +83,7 @@ Ouvrir un terminal et lancer les commandes suivantes:
 cd tnah_devapp
 # sourcer l'environnement virtuel
 source .venv/bin/activate
-# lancer jupyter pour accéder aux notebooks
+# lancer jupyter pour accéder aux notebooks, puis aller sur `http://localhost:8888/`
 jupyter notebook
 ```
 
