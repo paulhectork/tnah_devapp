@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
 
+# a bash script to tests that all flask apps can actually run
+#
+# - it creates a clean .venv, 
+# - install requirements from requirements.txt,
+# - discovers all `main.py` files in `apps/`
+# - runs each app for 5s. ensures the app doesn´t exit and no error message is printed
+# - logs which app works and which doesn´t , and list those at the end
+# - recreate a clean .venv at the end
+#
+# USAGE: bash test_flask_apps.sh
+
 set -e
 
 # colors for output
@@ -19,6 +30,8 @@ REQUIREMENTS_FILE="$ROOT_DIR/requirements.txt"
 TIMEOUT_SECONDS=5
 # state: does a venv exist before running the script ? (if so, drop it, create a clean one for the script, recreate a clean one at the end)
 VENV_EXISTS="false"
+# if VENV_EXISTS, store all packages it contains to PACKAGES so that they can be reinstalled before exiting
+PACKAGES=""
 
 # Track results
 declare -a FAILED_APPS=()
@@ -29,12 +42,15 @@ echo "flask apps testing"
 echo "******************************************"
 echo ""
 
-# Step 1: Create virtual environment
+# step 1: create virtual environment
 echo -e "${YELLOW}[1/4] setting up virtual environment...${NC}"
 if [ -d "$VENV_DIR" ]; then
-    echo "$VENV_DIR exists. removing and recreating from scratch"
-    rm -r "$VENV_DIR"
+    echo "dropping existing venv at $VENV_DIR"
+    source "$VENV_DIR/bin/activate"
+    PACKAGES=$(pip freeze)
     VENV_EXISTS="true"
+    deactivate
+    rm -r "$VENV_DIR"
 fi
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
@@ -152,7 +168,7 @@ if [ "$VENV_EXISTS" = "true" ]; then
     echo -e "${GREEN}creating a clean .venv at $VENV_DIR"
     python3 -m venv "$VENV_DIR"
     source "$VENV_DIR/bin/activate" 
-    pip install --quiet -r "$REQUIREMENTS_FILE"
+    [ -n "$PACKAGES" ] && pip install $PACKAGES  # NOTE: important to not have quotes here
 fi
 
 exit "$ERROR_STATUS"
