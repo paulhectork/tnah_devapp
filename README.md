@@ -10,6 +10,8 @@ avec Flask.
 ## TODO
 
 - tout relire
+- reprendre les cours 5 et 6 pour simplifier la création du CRUD: montrer seulement l'exemple sur la table User, pas Iconography (trop compliquée)
+- ajouter des illustrations qui montrent les chaînes de fichiers/fonctions (imports, etc)
 - potentiellement rajouter des images ou des tables de résumé ?
 
 ---
