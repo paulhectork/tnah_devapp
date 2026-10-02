@@ -12,6 +12,7 @@ avec Flask.
 - tout relire
 - reprendre les cours 5 et 6 pour simplifier la création du CRUD: montrer seulement l'exemple sur la table User, pas Iconography (trop compliquée)
 - ajouter des illustrations qui montrent les chaînes de fichiers/fonctions (imports, etc)
+- écrire les tests avec unittest, pas pytest (trop kompliké)
 - potentiellement rajouter des images ou des tables de résumé ?
 
 ---
